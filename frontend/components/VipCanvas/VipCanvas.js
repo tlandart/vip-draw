@@ -1,15 +1,18 @@
 import { useRef, useEffect, useState } from "react";
 
 /* A Canvas component that can be drawn on with the mouse, with undo and reset buttons.
-  - canvasRef: will be set to a reference to the pure html canvas
-  - width: width of canvas
-  - height: height of canvas
-  - lineWidth: width of drawing line
-  - minDist: minimum length of line strokes in the drawing
+    - canvasRef: will be set to a reference to the pure html canvas
+    - setCanvasResetFunc: set a function that resets/saves the canvas
+    - width: width of canvas
+    - height: height of canvas
+    - lineWidth: width of drawing line
+    - minDist: minimum length of line strokes in the drawing
 */
 
 export default function VipCanvas({
+  className,
   canvasRef,
+  setCanvasResetFunc,
   width,
   height,
   lineWidth,
@@ -27,6 +30,13 @@ export default function VipCanvas({
   const currentDrawing = useRef([]);
 
   useEffect(function () {
+    // set the function
+    setCanvasResetFunc(() => () => {
+      // TODO save drawing to db
+      console.log("saving to db", currentDrawing);
+      resetCanvas(true);
+    });
+
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);
   }, []);
@@ -117,7 +127,7 @@ export default function VipCanvas({
   }
 
   return (
-    <>
+    <div className={className}>
       <canvas
         className={`bg-white h-[${height}px] w-[${width}px]`}
         width={width}
@@ -131,6 +141,6 @@ export default function VipCanvas({
       ></canvas>
       <button onClick={() => resetCanvas(true)}>[Reset]</button>
       <button onClick={undoLastLine}>[Undo]</button>
-    </>
+    </div>
   );
 }

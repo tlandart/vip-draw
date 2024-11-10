@@ -1,65 +1,119 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { Peer } from "peerjs";
+import { gameGuess, gameInit, setCanvasRef } from "../api/gameApi";
 import VipHolder from "../components/VipHolder/VipHolder";
 
 export default function Home() {
   const streamRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const idLabelRef = useRef(null);
+  const [canvasResetFunc, setCanvasResetFunc] = useState(null);
+
   const inputIdRef = useRef(null); // id input element
+  const inputGuessRef = useRef(null); // guess input element
 
-  function startGame() {
-    const peer = new Peer();
+  // game logic
+  const [gameState, setGameState] = useState(null);
+  const playerNum = useRef(null); // client's player number. host = 0
 
-    peer.on("open", function (id) {
-      console.log("starting game.", id);
-    });
+  useEffect(
+    function () {
+      console.log("GAME STATE UPDATED\n" + printGameState());
+    },
+    [gameState]
+  );
 
-    peer.on("connection", function (conn) {
-      conn.on("open", function (data) {
-        const call = peer.call(conn.peer, streamRef.current);
-        call.on("stream", function (remoteStream) {
-          remoteVideoRef.current.srcObject = remoteStream;
-          remoteVideoRef.current.play();
-        });
-      });
-    });
+  function handleHost() {
+    playerNum.current = 0;
+    gameInit(
+      null,
+      setGameState,
+      streamRef,
+      remoteVideoRef,
+      idLabelRef,
+      canvasResetFunc
+    );
   }
 
-  function joinGame(event) {
+  function handleJoin(event) {
+    playerNum.current = 1;
     event.preventDefault();
-    const remoteId = inputIdRef.current.value;
-    const peer = new Peer();
+    const remoteId = inputIdRef.current.value.trim();
+    inputIdRef.current.value = "";
+    gameInit(
+      remoteId,
+      setGameState,
+      streamRef,
+      remoteVideoRef,
+      idLabelRef,
+      canvasResetFunc
+    );
+  }
 
-    peer.on("open", function (id) {
-      console.log("joining game.", remoteId);
-      peer.connect(remoteId);
-    });
+  function handleGuess(event) {
+    event.preventDefault();
+    const guess = inputGuessRef.current.value.trim();
+    inputGuessRef.current.value = "";
+    gameGuess(setGameState, playerNum.current, guess);
+  }
 
-    peer.on("call", function (call) {
-      call.answer(streamRef.current);
-      call.on("stream", function (remoteStream) {
-        remoteVideoRef.current.srcObject = remoteStream;
-        remoteVideoRef.current.play();
-      });
-    });
+  // TODO temp function for testing. returns gameState in string form
+  function printGameState() {
+    if (gameState) {
+      return `currentPlayer: ${gameState.currentPlayer}\npoints: ${
+        gameState.points
+      }\ncurrentWord: ${
+        gameState.currentPlayer === playerNum.current
+          ? gameState.currentWord
+          : "[hidden]"
+      }\nYou are player #${playerNum.current}`;
+    }
+    return "gameState = null";
   }
 
   return (
     <>
-      <button onClick={startGame}>[Start game]</button>
-      <form onSubmit={joinGame}>
-        <input
-          ref={inputIdRef}
-          name="peerId"
-          type="text"
-          placeholder="enter id"
-          required
+      <div>
+        <button onClick={handleHost}>[Host game]</button>
+        <form onSubmit={handleJoin}>
+          <input
+            className="text-black"
+            ref={inputIdRef}
+            name="peerId"
+            type="text"
+            placeholder="enter id"
+            required
+          />
+          <button type="submit">[Join game]</button>
+        </form>
+      </div>
+      <>
+        <VipHolder
+          streamRef={streamRef}
+          remoteVideoRef={remoteVideoRef}
+          idLabelRef={idLabelRef}
+          setCanvasResetFunc={setCanvasResetFunc}
+          showCanvas={
+            gameState && playerNum.current === gameState.currentPlayer
+          }
+          showVideo={gameState && playerNum.current !== gameState.currentPlayer}
         />
-        <button type="submit">[Join game]</button>
-      </form>
-      <VipHolder streamRef={streamRef} remoteVideoRef={remoteVideoRef} />
+        {gameState && playerNum.current !== gameState.currentPlayer && (
+          <form onSubmit={handleGuess}>
+            <input
+              className="text-black"
+              ref={inputGuessRef}
+              name="guess"
+              type="text"
+              placeholder="enter guess"
+              required
+            />
+            <button type="submit">[Guess]</button>
+          </form>
+        )}
+      </>
+      <span className="whitespace-pre-line">{printGameState()}</span>
     </>
   );
 }
