@@ -6,3 +6,5 @@ todo: replace this with a full credits page
 - https://github.com/peers/peerjs/issues/460
 - https://stackoverflow.com/a/42111623
 - https://github.com/jmcker/Peer-to-Peer-Cue-System/
+- https://stackoverflow.com/a/70071486
+- https://github.com/peers/peerjs/issues/323#issuecomment-477349226

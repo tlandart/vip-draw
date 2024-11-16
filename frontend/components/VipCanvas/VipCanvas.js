@@ -11,13 +11,14 @@ import { useRef, useEffect, useState } from "react";
 
 export default function VipCanvas({
   className,
-  canvasRef,
-  setCanvasResetFunc,
+  setStream,
+  setCanvasSaveFunc,
   width,
   height,
   lineWidth,
   minDist,
 }) {
+  const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const oldMouse = useRef();
 
@@ -31,12 +32,13 @@ export default function VipCanvas({
 
   useEffect(function () {
     // set the function
-    setCanvasResetFunc(() => () => {
+    setCanvasSaveFunc(() => () => {
       // TODO save drawing to db
       console.log("saving to db", currentDrawing);
-      resetCanvas(true);
+      // resetCanvas(true);
     });
 
+    setStream(canvasRef.current.captureStream(60));
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);
   }, []);
