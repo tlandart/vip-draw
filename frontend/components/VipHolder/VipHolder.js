@@ -1,4 +1,3 @@
-import { useRef, useEffect, useState } from "react";
 import VipCanvas from "../VipCanvas/VipCanvas";
 
 /*
@@ -23,6 +22,13 @@ export default function VipHolder({
     <>
       <span ref={idLabelRef}></span>
       {showCanvas && (
+        <>
+          <span className="block text-xl">Draw!</span>{" "}
+          <span className="block text-xl">Word: {currentWord}</span>
+        </>
+      )}
+      {showVideo && <span className="block text-xl">Guess!</span>}
+      {showCanvas && (
         <VipCanvas
           className={"m-2"}
           setStream={setStream}
@@ -42,9 +48,6 @@ export default function VipHolder({
           ref={remoteVideoRef}
         />
       )}
-      {showCanvas && <span className="block text-xl">Draw!</span>}
-      {showCanvas && <span className="block text-xl">Word: {currentWord}</span>}
-      {showVideo && <span className="block text-xl">Guess!</span>}
     </>
   );
 }

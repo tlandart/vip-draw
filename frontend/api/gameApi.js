@@ -196,6 +196,7 @@ export function gameInit() {
     points: [0, 0],
     currentWord: randomWord(),
     timeLeft: 60, // time left until next stage
+    messages: [],
   };
   peerHostSend(gameSt);
   setGame(gameSt);
@@ -209,7 +210,9 @@ export function gameUpdateStream(stream) {
     );
   // replace the empty stream we're sending with the actual
   // canvas stream, now that it's loaded
-  call.peerConnection.getSenders()[0].replaceTrack(stream.getVideoTracks()[0]);
+  for (const s of call.peerConnection.getSenders()) {
+    s.replaceTrack(stream.getVideoTracks()[0]);
+  }
 }
 
 // guess by playerNum. updates client gameState accordingly
@@ -223,24 +226,35 @@ export function gameGuess(playerNum, guess) {
   }
 }
 
+// modify local gameSt by adding msg to the messages, ensuring only the last 5 messages are saved
+function addMessage(msg) {
+  gameSt.messages.push(msg);
+  gameSt.messages = gameSt.messages.slice(-5);
+}
+
 // guess is received by host connection
 // handles the actual logic for a guess
 export function gameGuessReceived(playerNum, guess) {
-  if (playerNum === gameSt.currentPlayer) {
-    console.error("Drawer cannot guess");
-    return;
-  }
-  if (guess === gameSt.currentWord) {
-    // correct guess. switch!
+  if (playerNum !== gameSt.currentPlayer && guess === gameSt.currentWord) {
+    // correct guess. add to chat, then switch!
     let points = gameSt.points;
     points[playerNum] += gameSt.timeLeft;
     points[gameSt.currentPlayer] += gameSt.timeLeft / 2;
+    addMessage(`[Player #${playerNum} correctly guessed!]`);
+    // set it this way in order to trigger an update when setGame() is called
     gameSt = {
-      ...gameSt, // set it this way in order to trigger an update when setGame() is called
+      ...gameSt,
       playerSave: gameSt.currentPlayer, // current player should save their drawing
       currentPlayer: gameSt.currentPlayer === 0 ? 1 : 0,
       points: points,
       currentWord: randomWord(),
+    };
+  } else {
+    // incorrect guess OR host sending a message. set playerSave back to -1 and add to chat
+    addMessage(`Player #${playerNum}: ${guess}`);
+    gameSt = {
+      ...gameSt,
+      playerSave: -1,
     };
   }
   peerHostSend(gameSt);

@@ -9,6 +9,7 @@ import {
   peerJoin,
 } from "../api/gameApi";
 import VipHolder from "../components/VipHolder/VipHolder";
+import VipMessages from "../components/VipMessages/VipMessages";
 
 export default function Home() {
   const [stream, setStream] = useState(null); // the outgoing stream of our canvas
@@ -104,20 +105,13 @@ export default function Home() {
             playerNum.current !== gameState.currentPlayer
           }
         />
-        {gameState.start === 2 &&
-          playerNum.current !== gameState.currentPlayer && (
-            <form onSubmit={handleGuess}>
-              <input
-                className="text-black"
-                ref={inputGuessRef}
-                name="guess"
-                type="text"
-                placeholder="enter guess"
-                required
-              />
-              <button type="submit">[Guess]</button>
-            </form>
-          )}
+        {gameState.start === 2 && (
+          <VipMessages
+            messages={gameState.messages}
+            inputGuessRef={inputGuessRef}
+            handleGuess={handleGuess}
+          />
+        )}
       </div>
     </>
   );
