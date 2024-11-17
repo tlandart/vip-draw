@@ -16,6 +16,7 @@ export default function Home() {
   const idLabelRef = useRef(null);
   const [canvasSaveFunc, setCanvasSaveFunc] = useState(null); // function to save canvas. set when the canvas is loaded, so this is defined in VipCanvas
   const [canvasRefreshFunc, setCanvasRefreshFunc] = useState(null); // function to refresh canvas. set when the canvas is loaded, so this is defined in VipCanvas
+  const videoElems = useRef(null); // video elements for all the streams
 
   const inputIdRef = useRef(null); // id input element
   const inputGuessRef = useRef(null); // guess input element
@@ -37,7 +38,7 @@ export default function Home() {
 
       // see https://stackoverflow.com/questions/50929159/first-frame-from-capturestream-not-sending
       // strangely, a javascript canvas stream doesn't actually transmit a live feed of a canvas UNTIL a change in the canvas occurs. every time the gameState changes, the video element here refreshes, meaning an update to the canvas stream needs to occur before it is properly shown.
-      if (canvasRefreshFunc) canvasRefreshFunc();
+      // if (canvasRefreshFunc) canvasRefreshFunc();
 
       // console.log("GAME STATE UPDATED", gameStateToString());
     },
@@ -50,6 +51,27 @@ export default function Home() {
       if (stream) peerUpdateStream(stream);
     },
     [stream]
+  );
+
+  useEffect(
+    function () {
+      // we must have the videoElems as a ref, otherwise the component will re-render the video elements each time a gameState update occurs, causing issues with the first frame of the canvas stream not being rendered (see https://stackoverflow.com/questions/50929159/first-frame-from-capturestream-not-sending)
+      videoElems.current = remoteStreams.map((stream, index) => (
+        <video
+          key={index + new Date()}
+          className={`bg-red-600 h-[300px] w-[300px] m-2 ${
+            // showVideoNum === index ? "" : "hidden"
+            []
+          }`}
+          ref={(ref) => {
+            if (ref) ref.srcObject = stream;
+          }}
+          autoPlay={true}
+        />
+      ));
+      console.log(videoElems.current);
+    },
+    [remoteStreams]
   );
 
   function addRemoteStream(s) {
@@ -130,7 +152,6 @@ export default function Home() {
           playerNum.current !== gameState.currentPlayer && (
             <span className="block text-xl">Guess!</span>
           )}
-
         <VipCanvas
           className={`m-2 ${showCanvas ? "" : "hidden"}`}
           setStream={setStream}
@@ -141,25 +162,9 @@ export default function Home() {
           lineWidth={5}
           minDist={1}
         />
-
         {gameState.start === 2 &&
           playerNum.current !== gameState.currentPlayer &&
-          remoteStreams.map((stream, index) => (
-            <video
-              key={index + new Date()}
-              className={`bg-red-600 h-[300px] w-[300px] m-2 ${
-                showVideoNum === index ? "" : "hidden"
-              }`}
-              ref={(ref) => {
-                if (ref && ref.srcObject !== stream) {
-                  console.log(ref.srcObject);
-                  console.log(stream);
-                  ref.srcObject = stream;
-                }
-              }}
-              autoPlay={true}
-            />
-          ))}
+          videoElems.current[showVideoNum]}
         {gameState.start === 2 && (
           <VipMessages
             messages={gameState.messages}
