@@ -2,9 +2,10 @@ import { useRef, useEffect, useState } from "react";
 
 /* A Canvas component that can be drawn on with the mouse, with undo and reset buttons.
     - canvasRef: will be set to a reference to the pure html canvas
-    - setCanvasResetFunc: set a function that resets/saves the canvas
-    - width: width of canvas
-    - height: height of canvas
+    - setStream: function to set our outgoing stream of the canvas
+    - setCanvasResetFunc: function to set a function that resets/saves the canvas
+    - setCanvasResetFunc: function to set a function that refreshes the canvas
+    - width/height: width/height of canvas
     - lineWidth: width of drawing line
     - minDist: minimum length of line strokes in the drawing
 */
@@ -13,6 +14,7 @@ export default function VipCanvas({
   className,
   setStream,
   setCanvasSaveFunc,
+  setCanvasRefreshFunc,
   width,
   height,
   lineWidth,
@@ -35,10 +37,29 @@ export default function VipCanvas({
     setCanvasSaveFunc(() => () => {
       // TODO save drawing to db
       console.log("saving to db", currentDrawing);
-      // resetCanvas(true);
+      // don't need to reset canvas because it is re-rendered anyway
+      resetCanvas(true);
+    });
+
+    setCanvasRefreshFunc(() => () => {
+      console.log("refreshing");
+      ctxRef.current.drawImage(ctxRef.current.canvas, 0, 0);
     });
 
     setStream(canvasRef.current.captureStream(60));
+
+    // function createEmptyStream() {
+    //   const canvas = Object.assign(document.createElement("canvas"), {});
+    //   canvas.getContext("2d").fillRect(0, 0, 20, 20);
+
+    //   const stream = canvas.captureStream();
+    //   const track = stream.getVideoTracks()[0];
+
+    //   let emptyVid = Object.assign(track, { enabled: false });
+    //   return new MediaStream([emptyVid]);
+    // }
+    // setStream(createEmptyStream());
+
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);
   }, []);
