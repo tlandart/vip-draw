@@ -233,6 +233,50 @@ export function peerUpdateStream(stream) {
   }
 }
 
+export function peerDisconnect(stream) {
+  console.log("Disconnecting...");
+
+  // Close all remote connections
+  for (const conn of joinConns) {
+    if (conn && conn.open) {
+      console.log("Closing connection...");
+      conn.close();
+    }
+  }
+
+  // Close the host connection
+  if (hostConn && hostConn.open) {
+    console.log("Closing host connection...");
+    hostConn.close();
+  }
+
+  // Close the call connections
+  for (const call of calls) {
+    if (call) {
+      console.log("Closing call...");
+      call.close();
+    }
+  }
+
+  // Destroy peer instance
+  if (peer) {
+    console.log("Destroying peer...");
+    peer.destroy();
+    peer = null;
+  }
+
+  // Stop media stream tracks
+  if (stream && stream.getTracks) {
+    console.log("Stopping stream...");
+    stream.getTracks().forEach(track => track.stop());
+  }
+
+  // Reset the game state to initial state
+  gameSt = { start: 0 };
+  console.log("Resetting game state...");
+  setGame(gameSt); 
+}
+
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////

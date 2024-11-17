@@ -7,6 +7,7 @@ import {
   peerUpdateStream,
   peerHost,
   peerJoin,
+  peerDisconnect,
 } from "../api/gameApi";
 import VipCanvas from "../components/VipCanvas/VipCanvas";
 import VipMessages from "../components/VipMessages/VipMessages";
@@ -20,6 +21,9 @@ export default function Home() {
 
   const inputIdRef = useRef(null); // id input element
   const inputGuessRef = useRef(null); // guess input element
+
+  const [isJoinGameClicked, setIsJoinGameClicked] = useState(false); // State to track if the Join Game button was clicked
+  const [showHostJoinButtons, setShowHostJoinButtons] = useState(true); // State to control visibility of host/join buttons 
 
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
@@ -81,6 +85,7 @@ export default function Home() {
   function handleHost() {
     playerNum.current = 0;
     peerHost(setGameState, addRemoteStream, idLabelRef);
+    setShowHostJoinButtons(false); // Hide host/join buttons when game is hosted
   }
 
   function handleJoin(event) {
@@ -100,6 +105,25 @@ export default function Home() {
     inputGuessRef.current.value = "";
     gameGuess(playerNum.current, guess);
   }
+
+  const handleJoinGameClick = () => {
+    setIsJoinGameClicked(prevState => !prevState); // Toggle the input field visibility
+  };
+
+  function handleBack() {
+    console.log("Going back...");
+    peerDisconnect(stream);
+  
+    setShowHostJoinButtons(true); // Show the host/join buttons again
+    setIsJoinGameClicked(false); // Hide the join game input field
+    setGameState({ start: 0 }); // Reset game state
+    
+    setTimeout(() => {
+      console.log("Disconnected.");
+    }, 500); 
+  }
+  
+  
 
   // TODO for debugging
   function gameStateToString() {
@@ -121,25 +145,37 @@ export default function Home() {
 
   return (
     <>
-      {gameState.start === 0 && (
-        <div>
+      {showHostJoinButtons && gameState.start === 0 && (
+        <div className="button-container">
+          <h1 className="page-title">The VIP Room</h1>
           <button onClick={handleHost}>[Host game]</button>
-          <form onSubmit={handleJoin}>
-            <input
-              className="text-black"
-              ref={inputIdRef}
-              name="peerId"
-              type="text"
-              placeholder="enter id"
-              required
-            />
-            <button type="submit">[Join game]</button>
-          </form>
+          <button onClick={handleJoinGameClick}>[Join game]</button>
+          {isJoinGameClicked && (
+            <form onSubmit={handleJoin} className="join-form">
+              <input
+                className="text-black"
+                ref={inputIdRef}
+                name="peerId"
+                type="text"
+                placeholder="enter id"
+                required
+              />
+              <button type="submit" className="id-submit">[Enter]</button>
+            </form>
+          )}
         </div>
       )}
+
+      {!showHostJoinButtons && (
+        <button onClick={handleBack} className="back-button">
+          &lt; Back
+        </button>
+      )}
+
       {gameState.start === 1 && playerNum.current === 0 && (
         <button onClick={handleStart}>[Start]</button>
       )}
+
       <div className={gameState.start ? "" : "hidden"}>
         <span ref={idLabelRef}></span>
         {showCanvas && (
@@ -165,6 +201,10 @@ export default function Home() {
         {gameState.start === 2 &&
           playerNum.current !== gameState.currentPlayer &&
           videoElems.current[showVideoNum]}
+          currentWord={gameState.currentWord ? gameState.currentWord : ""}
+          showCanvas={gameState.start === 2 && playerNum.current === gameState.currentPlayer}
+          showVideo={gameState.start === 2 && playerNum.current !== gameState.currentPlayer}
+        
         {gameState.start === 2 && (
           <VipMessages
             messages={gameState.messages}
