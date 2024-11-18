@@ -153,7 +153,6 @@ export function peerJoin(setGameState, addRemoteStream, idLabelRef, remoteId) {
     let first = true; // flag for the first time receiving a gameState
     hostConn = peer.connect(remoteId);
     hostConn.on("data", function (gameState) {
-      // receive updates of gameState.
       if (first) {
         // call every id (other than host, which has already called us, and ourselves)
         for (const theirId of gameState.ids.slice(1)) {
@@ -173,8 +172,14 @@ export function peerJoin(setGameState, addRemoteStream, idLabelRef, remoteId) {
         }
         first = false;
       }
+      // receive updates of gameState.
       gameSt = gameState;
       setGame(gameState);
+
+      // if the new gameState is back to original, reset our gameState.
+      if (gameSt.start === 0) {
+        peerDisconnect(canvStream);
+      }
     });
   });
 
@@ -236,6 +241,11 @@ export function peerUpdateStream(stream) {
 export function peerDisconnect(stream) {
   console.log("Disconnecting...");
 
+  // Reset the game state to initial state
+  gameSt = { start: 0 };
+  setGame(gameSt);
+  peerHostSend();
+
   // Close all remote connections
   for (const conn of joinConns) {
     if (conn && conn.open) {
@@ -243,11 +253,13 @@ export function peerDisconnect(stream) {
       conn.close();
     }
   }
+  joinConns = [];
 
   // Close the host connection
   if (hostConn && hostConn.open) {
     console.log("Closing host connection...");
     hostConn.close();
+    hostConn = null;
   }
 
   // Close the call connections
@@ -257,6 +269,7 @@ export function peerDisconnect(stream) {
       call.close();
     }
   }
+  calls = [];
 
   // Destroy peer instance
   if (peer) {
@@ -270,11 +283,6 @@ export function peerDisconnect(stream) {
     console.log("Stopping stream...");
     stream.getTracks().forEach((track) => track.stop());
   }
-
-  // Reset the game state to initial state
-  gameSt = { start: 0 };
-  console.log("Resetting game state...");
-  setGame(gameSt);
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -333,7 +341,6 @@ function gameGuessReceived(playerNum, guess) {
     points[playerNum] += gameSt.timeLeft;
     points[gameSt.currentPlayer] += gameSt.timeLeft / 6;
     addMessage(`[Player #${playerNum} correctly guessed!]`);
-    console.log(gameSt.correctPlayers);
 
     if (gameSt.correctPlayers.length + 1 >= gameSt.playerCount - 1) {
       // correct guess and all players guessed it. switch!
