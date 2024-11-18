@@ -4,7 +4,6 @@ import { useRef, useEffect, useState } from "react";
     - canvasRef: will be set to a reference to the pure html canvas
     - setStream: function to set our outgoing stream of the canvas
     - setCanvasResetFunc: function to set a function that resets/saves the canvas
-    - setCanvasResetFunc: function to set a function that refreshes the canvas
     - width/height: width/height of canvas
     - lineWidth: width of drawing line
     - minDist: minimum length of line strokes in the drawing
@@ -14,7 +13,6 @@ export default function VipCanvas({
   className,
   setStream,
   setCanvasSaveFunc,
-  setCanvasRefreshFunc,
   width,
   height,
   lineWidth,
@@ -39,11 +37,6 @@ export default function VipCanvas({
       console.log("saving to db", currentDrawing);
       // don't need to reset canvas because it is re-rendered anyway
       resetCanvas(true);
-    });
-
-    setCanvasRefreshFunc(() => () => {
-      console.log("refreshing");
-      ctxRef.current.drawImage(ctxRef.current.canvas, 0, 0);
     });
 
     setStream(canvasRef.current.captureStream(60));

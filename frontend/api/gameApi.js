@@ -250,7 +250,7 @@ export function gameInit() {
     start: 2, // 0 = can't start; 1 = waiting to start; 2 = starting/started
     playerSave: -1, // which player should save their drawing when reading this
     currentPlayer: 0, // 0 or 1, the player who is drawing
-    correctCount: 0, // number of players correctly guessed
+    correctPlayers: [], // array of player numbers who correctly guessed so far
     points: Array(gameSt.playerCount).fill(0), // array of points. points[x] is player #x's points
     currentWord: randomWord(),
     timeLeft: 60, // time left until next stage
@@ -280,12 +280,18 @@ function addMessage(msg) {
 // guess is received by host connection
 // handles the actual logic for a guess
 function gameGuessReceived(playerNum, guess) {
-  if (playerNum !== gameSt.currentPlayer && guess === gameSt.currentWord) {
+  if (
+    playerNum !== gameSt.currentPlayer &&
+    guess === gameSt.currentWord &&
+    !(playerNum in gameSt.correctPlayers)
+  ) {
     let points = gameSt.points;
     points[playerNum] += gameSt.timeLeft;
     points[gameSt.currentPlayer] += gameSt.timeLeft / 6;
     addMessage(`[Player #${playerNum} correctly guessed!]`);
-    if (gameSt.correctCount + 1 >= gameSt.playerCount - 1) {
+    console.log(gameSt.correctPlayers);
+
+    if (gameSt.correctPlayers.length + 1 >= gameSt.playerCount - 1) {
       // correct guess and all players guessed it. switch!
       gameSt = {
         ...gameSt,
@@ -295,7 +301,7 @@ function gameGuessReceived(playerNum, guess) {
             ? gameSt.currentPlayer + 1
             : 0, // cycle to next player
         points: points,
-        correctCount: 0,
+        correctPlayers: [],
         timeLeft: 60,
         currentWord: randomWord(),
       };
@@ -305,7 +311,7 @@ function gameGuessReceived(playerNum, guess) {
         ...gameSt,
         playerSave: -1, // current player should save their drawing
         points: points,
-        correctCount: gameSt.correctCount + 1,
+        correctPlayers: [...gameSt.correctPlayers, playerNum],
       };
     }
   } else {

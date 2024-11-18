@@ -15,7 +15,6 @@ export default function Home() {
   const [stream, setStream] = useState(null); // the outgoing stream of our canvas
   const idLabelRef = useRef(null);
   const [canvasSaveFunc, setCanvasSaveFunc] = useState(null); // function to save canvas. set when the canvas is loaded, so this is defined in VipCanvas
-  const [canvasRefreshFunc, setCanvasRefreshFunc] = useState(null); // function to refresh canvas. set when the canvas is loaded, so this is defined in VipCanvas
   const videoElems = useRef(null); // video elements for all the streams
 
   const inputIdRef = useRef(null); // id input element
@@ -36,10 +35,6 @@ export default function Home() {
       // idea: in gameState, a dictionary w booleans "save" = [drawing: 0, correctGuesser: 2, time: 45]
       if (gameState.playerSave === playerNum.current) canvasSaveFunc();
 
-      // see https://stackoverflow.com/questions/50929159/first-frame-from-capturestream-not-sending
-      // strangely, a javascript canvas stream doesn't actually transmit a live feed of a canvas UNTIL a change in the canvas occurs. every time the gameState changes, the video element here refreshes, meaning an update to the canvas stream needs to occur before it is properly shown.
-      // if (canvasRefreshFunc) canvasRefreshFunc();
-
       // console.log("GAME STATE UPDATED", gameStateToString());
     },
     [gameState]
@@ -47,7 +42,6 @@ export default function Home() {
 
   useEffect(
     function () {
-      console.log("STREAM CHANGED", stream);
       if (stream) peerUpdateStream(stream);
     },
     [stream]
@@ -59,7 +53,7 @@ export default function Home() {
       videoElems.current = remoteStreams.map((stream, index) => (
         <video
           key={index + new Date()}
-          className={`bg-red-600 h-[300px] w-[300px] m-2 ${
+          className={`bg-white h-[300px] w-[300px] m-2 ${
             // showVideoNum === index ? "" : "hidden"
             []
           }`}
@@ -69,7 +63,6 @@ export default function Home() {
           autoPlay={true}
         />
       ));
-      console.log(videoElems.current);
     },
     [remoteStreams]
   );
@@ -116,13 +109,12 @@ export default function Home() {
     gameState.currentPlayer > playerNum.current
       ? gameState.currentPlayer - 1
       : gameState.currentPlayer;
-  const showCanvas =
-    gameState.start === 2 && playerNum.current === gameState.currentPlayer;
+  const showCanvas = playerNum.current === gameState.currentPlayer;
 
   return (
     <>
       {gameState.start === 0 && (
-        <div>
+        <>
           <button onClick={handleHost}>[Host game]</button>
           <form onSubmit={handleJoin}>
             <input
@@ -135,44 +127,43 @@ export default function Home() {
             />
             <button type="submit">[Join game]</button>
           </form>
-        </div>
+        </>
       )}
       {gameState.start === 1 && playerNum.current === 0 && (
         <button onClick={handleStart}>[Start]</button>
       )}
-      <div className={gameState.start ? "" : "hidden"}>
-        <span ref={idLabelRef}></span>
-        {showCanvas && (
-          <>
-            <span className="block text-xl">Draw!</span>{" "}
-            <span className="block text-xl">Word: {gameState.currentWord}</span>
-          </>
-        )}
-        {gameState.start === 2 &&
-          playerNum.current !== gameState.currentPlayer && (
+      {gameState.start === 2 && (
+        <>
+          {showCanvas && (
+            <>
+              <span className="block text-xl">Draw!</span>{" "}
+              <span className="block text-xl">
+                Word: {gameState.currentWord}
+              </span>
+            </>
+          )}
+          {playerNum.current !== gameState.currentPlayer && (
             <span className="block text-xl">Guess!</span>
           )}
-        <VipCanvas
-          className={`m-2 ${showCanvas ? "" : "hidden"}`}
-          setStream={setStream}
-          setCanvasSaveFunc={setCanvasSaveFunc}
-          setCanvasRefreshFunc={setCanvasRefreshFunc}
-          width={300}
-          height={300}
-          lineWidth={5}
-          minDist={1}
-        />
-        {gameState.start === 2 &&
-          playerNum.current !== gameState.currentPlayer &&
-          videoElems.current[showVideoNum]}
-        {gameState.start === 2 && (
+          <VipCanvas
+            className={`m-2 ${showCanvas ? "" : "hidden"}`}
+            setStream={setStream}
+            setCanvasSaveFunc={setCanvasSaveFunc}
+            width={300}
+            height={300}
+            lineWidth={5}
+            minDist={1}
+          />
+          {playerNum.current !== gameState.currentPlayer &&
+            videoElems.current[showVideoNum]}
           <VipMessages
             messages={gameState.messages}
             inputGuessRef={inputGuessRef}
             handleGuess={handleGuess}
           />
-        )}
-      </div>
+        </>
+      )}
+      <span ref={idLabelRef}></span>
       <div>{gameStateToString()}</div>
     </>
   );
