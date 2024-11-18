@@ -79,6 +79,7 @@ export default function Home() {
   );
 
   function addRemoteStream(s) {
+    console.log("Adding remote stream:", s);
     setRemoteStreams((remoteStreams) => [...remoteStreams, s]);
   }
 
@@ -116,11 +117,13 @@ export default function Home() {
   
     setShowHostJoinButtons(true); // Show the host/join buttons again
     setIsJoinGameClicked(false); // Hide the join game input field
-    setGameState({ start: 0 }); // Reset game state
+    setGameState({ start: 0, playerCount: 0 }); // Reset game state
     
+    playerNum.current = -1; 
+  
     setTimeout(() => {
       console.log("Disconnected.");
-    }, 500); 
+    }, 500);
   }
   
   
@@ -145,6 +148,7 @@ export default function Home() {
 
   return (
     <>
+      
       {showHostJoinButtons && gameState.start === 0 && (
         <div className="button-container">
           <h1 className="page-title">The VIP Room</h1>
@@ -165,7 +169,7 @@ export default function Home() {
           )}
         </div>
       )}
-
+      
       {!showHostJoinButtons && (
         <button onClick={handleBack} className="back-button">
           &lt; Back
