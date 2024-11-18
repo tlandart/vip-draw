@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
+  --background: #ffd02c;
   --foreground: #171717;
 }
 
@@ -14,22 +14,111 @@
   }
 }
 
+.page-title {
+  font-size: 48px;
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin-bottom: 30px;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Atma", Arial, Helvetica, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+.button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px; /* Spacing between buttons */
+  align-items: center; /* Center the buttons horizontally */
 }
 
 button {
-  background: black;
-  color: white;
-  padding: 4px;
-  margin: 2px;
+  background: #ffae00;
+  color: #875d01;
+  font-size: 22px;
+  padding: 10px 20px;
+  margin: 0;
   border-radius: 5px;
+  width: 200px;
+  height: 50px;
   transition-duration: 200ms;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 button:hover {
   background: white;
   color: black;
+}
+
+.id-submit {
+  background: #4caf50;
+  color: white;
+  font-size: 16px;
+  padding: 10px 20px;
+  margin: 5px 0;
+  border-radius: 5px;
+  width: 70px;
+  height: 50px;
+  box-sizing: border-box;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 200ms;
+}
+
+.join-input-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.join-form {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.join-form input {
+  padding: 8px 12px;
+  border-radius: 5px;
+  width: 150px;
+  height: 50px;
+}
+
+.join-form button {
+  padding: 10px 20px;
+  border-radius: 5px;
+  background-color: #4caf50;
+  color: white;
+  height: 50px;
+  width: 70px;
+  box-sizing: border-box;
+}
+
+.back-button {
+  position: absolute; /* Position it relative to the nearest positioned ancestor */
+  top: 20px; /* Distance from the top */
+  left: 20px; /* Distance from the left */
+  background: #ffae00;
+  color: #ad7600;
+  padding: 10px 20px;
+  margin: 0;
+  border-radius: 5px;
+  width: auto; /* Adjust width automatically */
+  height: 50px;
+  transition-duration: 200ms;
+  cursor: pointer;
+  z-index: 10; /* Ensure it's above other elements */
 }
