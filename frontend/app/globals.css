@@ -15,17 +15,17 @@
 }
 
 .page-title {
-  font-size: 48px; 
+  font-size: 48px;
   font-weight: bold;
-  color: #333; 
+  color: #333;
   text-align: center;
-  margin-bottom: 30px; 
+  margin-bottom: 30px;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Atma', Arial, Helvetica, sans-serif;
+  font-family: "Atma", Arial, Helvetica, sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;

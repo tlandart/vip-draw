@@ -14,7 +14,6 @@ export default function VipCanvas({
   className,
   setStream,
   setCanvasSaveFunc,
-  setCanvasRefreshFunc,
   width,
   height,
   lineWidth,
@@ -36,29 +35,12 @@ export default function VipCanvas({
     // set the function
     setCanvasSaveFunc(() => () => {
       // TODO save drawing to db
-      console.log("saving to db", currentDrawing);
-      // don't need to reset canvas because it is re-rendered anyway
+      console.log("saving to db", currentDrawing.current);
+      // we don't actually need to reset canvas because it is re-rendered anyway
       resetCanvas(true);
     });
 
-    setCanvasRefreshFunc(() => () => {
-      console.log("refreshing");
-      ctxRef.current.drawImage(ctxRef.current.canvas, 0, 0);
-    });
-
     setStream(canvasRef.current.captureStream(60));
-
-    // function createEmptyStream() {
-    //   const canvas = Object.assign(document.createElement("canvas"), {});
-    //   canvas.getContext("2d").fillRect(0, 0, 20, 20);
-
-    //   const stream = canvas.captureStream();
-    //   const track = stream.getVideoTracks()[0];
-
-    //   let emptyVid = Object.assign(track, { enabled: false });
-    //   return new MediaStream([emptyVid]);
-    // }
-    // setStream(createEmptyStream());
 
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);

@@ -268,13 +268,13 @@ export function peerDisconnect(stream) {
   // Stop media stream tracks
   if (stream && stream.getTracks) {
     console.log("Stopping stream...");
-    stream.getTracks().forEach(track => track.stop());
+    stream.getTracks().forEach((track) => track.stop());
   }
 
   // Reset the game state to initial state
   gameSt = { start: 0 };
   console.log("Resetting game state...");
-  setGame(gameSt); 
+  setGame(gameSt);
 }
 
 ////////////////////////////////////////////////////////////////////////////
