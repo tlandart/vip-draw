@@ -3,8 +3,7 @@ import { useRef, useEffect, useState } from "react";
 /* A Canvas component that can be drawn on with the mouse, with undo and reset buttons.
     - canvasRef: will be set to a reference to the pure html canvas
     - setStream: function to set our outgoing stream of the canvas
-    - setCanvasResetFunc: function to set a function that resets/saves the canvas
-    - setCanvasResetFunc: function to set a function that refreshes the canvas
+    - setCanvasSaveFunc: function to set a function that saves and resets the canvas
     - width/height: width/height of canvas
     - lineWidth: width of drawing line
     - minDist: minimum length of line strokes in the drawing

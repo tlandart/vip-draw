@@ -10,7 +10,9 @@ import {
 import VipCanvas from "../VipCanvas/VipCanvas";
 import VipMessages from "../VipMessages/VipMessages";
 
-export default function VipGame({}) {
+/* The main multiplayer game. */
+
+export default function VipGame() {
   const [stream, setStream] = useState(null); // the outgoing stream of our canvas
   const [canvasSaveFunc, setCanvasSaveFunc] = useState(null); // function to save canvas. set when the canvas is loaded, so this is defined in VipCanvas
   const videoElems = useRef(null); // video elements for all the streams
@@ -107,10 +109,6 @@ export default function VipGame({}) {
     setGameState({ start: 0, playerCount: 0 }); // Reset game state
 
     playerNum.current = -1;
-
-    setTimeout(() => {
-      console.log("Disconnected.");
-    }, 500);
   }
 
   // TODO for debugging
