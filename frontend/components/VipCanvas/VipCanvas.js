@@ -39,7 +39,7 @@ export default function VipCanvas({
       resetCanvas(true);
     });
 
-    setStream(canvasRef.current.captureStream(60));
+    setStream(canvasRef.current.captureStream(30));
 
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);

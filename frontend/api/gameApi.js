@@ -1,9 +1,5 @@
 import { Peer } from "peerjs";
 
-/* 
-  Peerjs interactions.
-*/
-
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
 let hostConn; // connection to host. used only by a remote player.
@@ -11,7 +7,12 @@ let calls = []; // calls all other players
 
 let gameSt = { start: 1, playerCount: 1, ids: [] }; // local gameState
 let setGame = null; // function to set CLIENT gameState (NOT the one just above)
+let restartTime = null; // function to reset client timer
 let canvStream; // our outgoing canvas stream
+
+/* 
+  Peerjs interactions.
+*/
 
 // TODO read this from https://github.com/googlecreativelab/quickdraw-dataset/blob/master/categories.txt
 let words = [
@@ -85,13 +86,19 @@ function createEmptyStream() {
 }
 
 // open host connection
-export function peerHost(setGameState, addRemoteStream, idLabelRef) {
+export function peerHost(
+  setGameState,
+  restartTimerFunc,
+  addRemoteStream,
+  idLabelRef
+) {
   if (peer) {
     console.error("Already connected to a game.");
     return;
   }
 
   setGame = setGameState;
+  restartTime = restartTimerFunc;
 
   peer = new Peer();
 
@@ -136,13 +143,20 @@ export function peerHost(setGameState, addRemoteStream, idLabelRef) {
 }
 
 // join remoteId session
-export function peerJoin(setGameState, addRemoteStream, idLabelRef, remoteId) {
+export function peerJoin(
+  setGameState,
+  restartTimerFunc,
+  addRemoteStream,
+  idLabelRef,
+  remoteId
+) {
   if (peer) {
     console.error("Already connected to a game.");
     return;
   }
 
   setGame = setGameState;
+  restartTime = restartTimerFunc;
 
   peer = new Peer();
 
@@ -196,7 +210,7 @@ export function peerJoin(setGameState, addRemoteStream, idLabelRef, remoteId) {
 
 // sends gameState out as data to all connections
 // *only the host should call this function*
-function peerHostSend() {
+export function peerHostSend() {
   for (const conn of joinConns) {
     if (conn && conn.open) {
       conn.send(gameSt);
@@ -294,6 +308,8 @@ export function peerDisconnect(stream) {
   Logic for the drawing game. These functions take the entire gameState objectively and makes changes. The game component will render the game with the client's associated player number.
 */
 
+export const TIMER_DEFAULT = 45;
+
 // start the game
 export function gameInit() {
   // starting state of gameState
@@ -305,9 +321,10 @@ export function gameInit() {
     correctPlayers: [], // array of player numbers who correctly guessed so far
     points: Array(gameSt.playerCount).fill(0), // array of points. points[x] is player #x's points
     currentWord: randomWord(),
-    timeLeft: 60, // time left until next stage
+    timeLeft: TIMER_DEFAULT, // time left until next stage
     messages: [],
   };
+  restartTime();
   peerHostSend(gameSt);
   setGame(gameSt);
 }
@@ -353,9 +370,10 @@ function gameGuessReceived(playerNum, guess) {
             : 0, // cycle to next player
         points: points,
         correctPlayers: [],
-        timeLeft: 60,
+        timeLeft: TIMER_DEFAULT,
         currentWord: randomWord(),
       };
+      restartTime();
     } else {
       // correct guess and not all players guessed it yet.
       gameSt = {
@@ -377,8 +395,40 @@ function gameGuessReceived(playerNum, guess) {
   peerHostSend();
 }
 
+// change timer to "seconds"
+export function gameTimeChange(seconds) {
+  if (gameSt.start === 2) {
+    gameSt = {
+      ...gameSt,
+      playerSave: -1,
+      timeLeft: seconds,
+    };
+    setGame(gameSt);
+    peerHostSend();
+    if (gameSt.timeLeft <= 0) gameTimeout();
+  }
+}
+
 // time ran out
-export function gameTimeout() {}
+function gameTimeout() {
+  console.log("timer ended");
+  if (gameSt.start === 2) {
+    gameSt = {
+      ...gameSt,
+      playerSave: gameSt.currentPlayer, // current player should save their drawing
+      currentPlayer:
+        gameSt.currentPlayer + 1 < gameSt.playerCount
+          ? gameSt.currentPlayer + 1
+          : 0, // cycle to next player
+      correctPlayers: [],
+      timeLeft: TIMER_DEFAULT,
+      currentWord: randomWord(),
+    };
+    restartTime();
+    setGame(gameSt);
+    peerHostSend();
+  }
+}
 
 // end the round.
 // send all stats and the final drawing to db
