@@ -1,14 +1,17 @@
 import { useRef, useEffect, useState } from "react";
 import {
+  TIMER_DEFAULT,
   gameGuess,
   gameInit,
   peerUpdateStream,
   peerHost,
   peerJoin,
   peerDisconnect,
+  gameTimeChange,
 } from "../../api/gameApi";
 import VipCanvas from "../VipCanvas/VipCanvas";
 import VipMessages from "../VipMessages/VipMessages";
+import VipTimer from "../VipTimer/VipTimer";
 
 /* The main multiplayer game. */
 
@@ -29,20 +32,7 @@ export default function VipGame() {
   const [remoteStreams, setRemoteStreams] = useState([]); // the incoming streams from joined players
   const playerNum = useRef(-1); // client's player number. -1 = invalid; 0 = host
 
-  useEffect(
-    function () {
-      if (playerNum.current === -1)
-        playerNum.current = gameState.playerCount - 1;
-
-      // save the canvas to db if our player should
-      // TODO this needs to change for saving other stats.
-      // idea: in gameState, a dictionary w booleans "save" = [drawing: 0, correctGuesser: 2, time: 45]
-      if (gameState.playerSave === playerNum.current) canvasSaveFunc();
-
-      // console.log("GAME STATE UPDATED", gameStateToString());
-    },
-    [gameState]
-  );
+  const [restartTimerFunc, setRestartTimerFunc] = useState();
 
   useEffect(
     function () {
@@ -72,17 +62,46 @@ export default function VipGame() {
     setRemoteStreams((remoteStreams) => [...remoteStreams, s]);
   }
 
+  useEffect(
+    function () {
+      if (playerNum.current === -1)
+        playerNum.current = gameState.playerCount - 1;
+
+      // save the canvas to db if our player should
+      // TODO this needs to change for saving other stats.
+      // idea: in gameState, a dictionary w booleans "save" = [drawing: 0, correctGuesser: 2, time: 45]
+      if (
+        gameState.playerSave >= 0 &&
+        gameState.playerSave === playerNum.current
+      )
+        canvasSaveFunc();
+
+      // console.log("GAME STATE UPDATED", gameStateToString());
+    },
+    [gameState]
+  );
+
   function handleHost() {
     playerNum.current = 0;
-    peerHost(setGameState, addRemoteStream, idLabelRef);
+    peerHost(setGameState, restartTimerFunc, addRemoteStream, idLabelRef);
     setShowHostJoinButtons(false); // Hide host/join buttons when game is hosted
   }
+
+  const handleJoinGameClick = () => {
+    setIsJoinGameClicked((prevState) => !prevState); // Toggle the input field visibility
+  };
 
   function handleJoin(event) {
     event.preventDefault();
     const remoteId = inputIdRef.current.value.trim();
     inputIdRef.current.value = "";
-    peerJoin(setGameState, addRemoteStream, idLabelRef, remoteId);
+    peerJoin(
+      setGameState,
+      restartTimerFunc,
+      addRemoteStream,
+      idLabelRef,
+      remoteId
+    );
   }
 
   function handleStart() {
@@ -96,9 +115,9 @@ export default function VipGame() {
     gameGuess(playerNum.current, guess);
   }
 
-  const handleJoinGameClick = () => {
-    setIsJoinGameClicked((prevState) => !prevState); // Toggle the input field visibility
-  };
+  function handleTimerChange(seconds) {
+    gameTimeChange(seconds);
+  }
 
   function handleBack() {
     console.log("Going back...");
@@ -130,8 +149,9 @@ export default function VipGame() {
 
   return (
     <>
-      <span ref={idLabelRef}></span>
       <span>{gameStateToString()}</span>
+      <span ref={idLabelRef}></span>
+
       {gameState.start === 0 && (
         <div className="button-container">
           <h1 className="page-title">The VIP Room</h1>
@@ -165,8 +185,17 @@ export default function VipGame() {
         <button onClick={handleStart}>[Start]</button>
       )}
 
+      <VipTimer
+        secondsInit={TIMER_DEFAULT}
+        setRestartTimerFunc={setRestartTimerFunc}
+        onTimerChange={handleTimerChange}
+      />
+
       {gameState.start === 2 && (
         <>
+          <div className="bg-orange-600 text-white p-2">
+            {gameState.timeLeft}
+          </div>
           {showCanvas && (
             <>
               <span className="block text-xl">Draw!</span>{" "}

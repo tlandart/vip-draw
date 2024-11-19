@@ -9,3 +9,4 @@ todo: replace this with a full credits page
 - https://stackoverflow.com/a/70071486
 - https://github.com/peers/peerjs/issues/323#issuecomment-477349226
 - https://stackoverflow.com/questions/50929159/first-frame-from-capturestream-not-sending
+- https://stackoverflow.com/a/40887181
