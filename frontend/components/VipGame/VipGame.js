@@ -26,7 +26,7 @@ export default function VipGame() {
 
   const [isJoinGameClicked, setIsJoinGameClicked] = useState(false); // State to track if the Join Game button was clicked
   const [showHostJoinButtons, setShowHostJoinButtons] = useState(true); // State to control visibility of host/join buttons
-
+  const [showBackButton, setShowBackButton] = useState(false); // State for the back button
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
   const [remoteStreams, setRemoteStreams] = useState([]); // the incoming streams from joined players
@@ -84,25 +84,63 @@ export default function VipGame() {
   function handleHost() {
     playerNum.current = 0;
     peerHost(setGameState, restartTimerFunc, addRemoteStream, idLabelRef);
-    setShowHostJoinButtons(false); // Hide host/join buttons when game is hosted
+    setShowHostJoinButtons(false); 
+    setShowBackButton(true); 
   }
 
   const handleJoinGameClick = () => {
-    setIsJoinGameClicked((prevState) => !prevState); // Toggle the input field visibility
+    setIsJoinGameClicked((prevState) => !prevState); 
   };
+
+  function checkGameValidity(gameId) {
+    return fetch(`http://localhost:4000/check-game/${gameId}`) 
+      .then((response) => {
+        if (response.ok) {
+          return response.json();  // Game ID is valid
+        } else {
+          return response.json().then((data) => {
+            throw new Error(data.message);  
+          });
+        }
+      })
+      .catch((error) => {
+        console.error(error.message);  
+        alert(error.message);  
+        return null;  
+      });
+  }
 
   function handleJoin(event) {
     event.preventDefault();
     const remoteId = inputIdRef.current.value.trim();
-    inputIdRef.current.value = "";
-    peerJoin(
-      setGameState,
-      restartTimerFunc,
-      addRemoteStream,
-      idLabelRef,
-      remoteId
-    );
-  }
+    console.log('Attempting to join game with ID:', remoteId);
+    inputIdRef.current.value = ""; 
+
+    // if the game ID exists
+    fetch(`http://localhost:4000/get-game/${remoteId}`)
+        .then((response) => response.json())
+        .then((data) => {
+            if (data.message && data.message.includes('active')) {
+                console.log('Game is valid, joining...');
+                peerJoin(
+                    setGameState,
+                    restartTimerFunc,
+                    addRemoteStream,
+                    idLabelRef,
+                    remoteId
+                );
+                setShowBackButton(true); 
+                setIsJoinGameClicked(false); 
+            } else {
+                alert(`The game ID ${remoteId} is invalid or no longer active.`);
+            }
+        })
+        .catch((error) => {
+            console.error('Error while checking the game ID:', error);
+            alert('An error occurred while checking the game ID.');
+        });
+}
+
 
   function handleStart() {
     gameInit();
@@ -121,13 +159,34 @@ export default function VipGame() {
 
   function handleBack() {
     console.log("Going back...");
+    if (playerNum.current === 0) {
+      const hostId = idLabelRef.current.innerHTML.replace("Host ID: ", ""); 
+      deleteHostId(hostId); 
+    }
     peerDisconnect(stream);
 
+    setShowBackButton(false); // Hide back button when going back
     setShowHostJoinButtons(true); // Show the host/join buttons again
     setIsJoinGameClicked(false); // Hide the join game input field
     setGameState({ start: 0, playerCount: 0 }); // Reset game state
 
     playerNum.current = -1;
+  }
+
+  function deleteHostId(hostId) {
+    fetch(`http://localhost:4000/delete-game/${hostId}`, {
+      method: "DELETE",
+    })
+      .then((response) => {
+        if (response.ok) {
+          console.log("Host ID deleted from the database.");
+        } else {
+          console.error("Failed to delete Host ID.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error deleting Host ID:", error);
+      });
   }
 
   // TODO for debugging
@@ -175,14 +234,21 @@ export default function VipGame() {
         </div>
       )}
 
-      {!showHostJoinButtons && (
+      {showBackButton && (
         <button onClick={handleBack} className="back-button">
           &lt; Back
         </button>
       )}
 
       {gameState.start === 1 && playerNum.current === 0 && (
-        <button onClick={handleStart}>[Start]</button>
+        <div className="start-button-container flex items-center justify-center h-screen">
+          <button
+            onClick={handleStart}
+            className="bg-[#ffae00] text-[#875d01] text-lg font-medium w-[200px] h-[50px] rounded-md transition duration-200 flex justify-center items-center hover:brightness-110 active:brightness-90"
+          >
+            [Start]
+          </button>
+        </div>
       )}
 
       <VipTimer

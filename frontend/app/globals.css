@@ -36,8 +36,8 @@ body {
 .button-container {
   display: flex;
   flex-direction: column;
-  gap: 10px; /* Spacing between buttons */
-  align-items: center; /* Center the buttons horizontally */
+  gap: 10px; 
+  align-items: center; 
 }
 
 button {
@@ -108,17 +108,17 @@ button:hover {
 }
 
 .back-button {
-  position: absolute; /* Position it relative to the nearest positioned ancestor */
-  top: 20px; /* Distance from the top */
-  left: 20px; /* Distance from the left */
+  position: absolute;
+  top: 20px; 
+  left: 20px; 
   background: #ffae00;
   color: #ad7600;
   padding: 10px 20px;
   margin: 0;
   border-radius: 5px;
-  width: auto; /* Adjust width automatically */
+  width: auto; 
   height: 50px;
   transition-duration: 200ms;
   cursor: pointer;
-  z-index: 10; /* Ensure it's above other elements */
+  z-index: 10; 
 }

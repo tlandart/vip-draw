@@ -102,11 +102,32 @@ export function peerHost(
 
   peer = new Peer();
 
-  peer.on("open", function (id) {
+  peer.on("open", async function (id) {
     console.log("starting peer.", id);
     idLabelRef.current.innerHTML = "Host ID: " + id;
+
     gameSt = { ...gameSt, start: 1, playerCount: 1, ids: [id] };
     setGame(gameSt);
+
+    // Send the host ID to the backend
+    try {
+      const response = await fetch("http://localhost:4000/create-host", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ hostId: id }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to store Host ID.");
+      }
+
+      const data = await response.json();
+      console.log(data.message); 
+    } catch (error) {
+      console.error("Error storing Host ID:", error);
+    }
   });
 
   peer.on("connection", function (c) {
