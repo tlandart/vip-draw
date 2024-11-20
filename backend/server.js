@@ -52,8 +52,7 @@ app.post('/create-host', async (req, res) => {
   }
 
   try {
-    // Store host ID 
-    await redisClient.set(hostId, 'active', { EX: 3600 });  // Expires after 1 hour
+    await redisClient.set(hostId, 'active', { EX: 3600 }); // Expires after 1 hour
     console.log(`Host ID ${hostId} stored successfully.`);
     res.send({ message: `Host ID ${hostId} created successfully.` });
   } catch (err) {

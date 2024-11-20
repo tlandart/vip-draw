@@ -12,6 +12,7 @@ import {
 import VipCanvas from "../VipCanvas/VipCanvas";
 import VipMessages from "../VipMessages/VipMessages";
 import VipTimer from "../VipTimer/VipTimer";
+import { createHost, deleteGame, checkGame } from "../../api/dbApi";
 
 /* The main multiplayer game. */
 
@@ -27,6 +28,8 @@ export default function VipGame() {
   const [isJoinGameClicked, setIsJoinGameClicked] = useState(false); // State to track if the Join Game button was clicked
   const [showHostJoinButtons, setShowHostJoinButtons] = useState(true); // State to control visibility of host/join buttons
   const [showBackButton, setShowBackButton] = useState(false); // State for the back button
+  const [errorMessage, setErrorMessage] = useState(""); // State to store error message
+  const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
   const [remoteStreams, setRemoteStreams] = useState([]); // the incoming streams from joined players
@@ -81,66 +84,75 @@ export default function VipGame() {
     [gameState]
   );
 
-  function handleHost() {
+  async function handleHost() {
     playerNum.current = 0;
-    peerHost(setGameState, restartTimerFunc, addRemoteStream, idLabelRef);
-    setShowHostJoinButtons(false); 
-    setShowBackButton(true); 
+  
+    try {
+      peerHost(setGameState, restartTimerFunc, addRemoteStream, idLabelRef);
+      console.log("Host setup initiated.");
+    } catch (error) {
+      console.error("Failed to start host:", error);
+    }
+  
+    setShowHostJoinButtons(false);
+    setShowBackButton(true);
   }
 
   const handleJoinGameClick = () => {
     setIsJoinGameClicked((prevState) => !prevState); 
   };
 
-  function checkGameValidity(gameId) {
-    return fetch(`http://localhost:4000/check-game/${gameId}`) 
-      .then((response) => {
-        if (response.ok) {
-          return response.json();  // Game ID is valid
-        } else {
-          return response.json().then((data) => {
-            throw new Error(data.message);  
-          });
-        }
-      })
-      .catch((error) => {
-        console.error(error.message);  
-        alert(error.message);  
-        return null;  
-      });
-  }
-
   function handleJoin(event) {
     event.preventDefault();
     const remoteId = inputIdRef.current.value.trim();
-    console.log('Attempting to join game with ID:', remoteId);
+    console.log("Attempting to join game with ID:", remoteId);
+
     inputIdRef.current.value = ""; 
+    checkGame(remoteId)
+      .then((data) => {
+        if (data.error) {
+          console.log(data.error);
+          setErrorMessage(data.error); 
+          setFadeOut(false); 
 
-    // if the game ID exists
-    fetch(`http://localhost:4000/get-game/${remoteId}`)
-        .then((response) => response.json())
-        .then((data) => {
-            if (data.message && data.message.includes('active')) {
-                console.log('Game is valid, joining...');
-                peerJoin(
-                    setGameState,
-                    restartTimerFunc,
-                    addRemoteStream,
-                    idLabelRef,
-                    remoteId
-                );
-                setShowBackButton(true); 
-                setIsJoinGameClicked(false); 
-            } else {
-                alert(`The game ID ${remoteId} is invalid or no longer active.`);
-            }
-        })
-        .catch((error) => {
-            console.error('Error while checking the game ID:', error);
-            alert('An error occurred while checking the game ID.');
-        });
-}
+          setTimeout(() => {
+            setFadeOut(true); 
+            setTimeout(() => {
+              setErrorMessage(""); 
+            }, 500); 
+          }, 5000);
+        } else {
+          // Proceed if the game ID is valid
+          console.log("Game is valid:", data);
+          peerJoin(
+            setGameState,
+            restartTimerFunc,
+            addRemoteStream,
+            idLabelRef,
+            remoteId
+          );
 
+          setShowBackButton(true);
+          setIsJoinGameClicked(false); 
+          setErrorMessage(""); 
+        }
+      })
+      .catch((err) => {
+        console.error("Error while checking game ID:", err);
+        setErrorMessage("Error occurred while checking the game ID."); 
+        setFadeOut(false); 
+
+        // Clear the error message after 5 seconds
+        setTimeout(() => {
+          setFadeOut(true); 
+          setTimeout(() => {
+            setErrorMessage(""); 
+          }, 500); 
+        }, 5000);
+      });
+  }
+  
+  
 
   function handleStart() {
     gameInit();
@@ -160,8 +172,14 @@ export default function VipGame() {
   function handleBack() {
     console.log("Going back...");
     if (playerNum.current === 0) {
-      const hostId = idLabelRef.current.innerHTML.replace("Host ID: ", ""); 
-      deleteHostId(hostId); 
+      const hostId = idLabelRef.current.innerHTML.replace("Host ID: ", "").trim();
+      deleteGame(hostId)
+        .then(() => {
+          console.log("Host ID deleted successfully.");
+        })
+        .catch((err) => {
+          console.error("Failed to delete host ID:", err);
+        });
     }
     peerDisconnect(stream);
 
@@ -171,22 +189,6 @@ export default function VipGame() {
     setGameState({ start: 0, playerCount: 0 }); // Reset game state
 
     playerNum.current = -1;
-  }
-
-  function deleteHostId(hostId) {
-    fetch(`http://localhost:4000/delete-game/${hostId}`, {
-      method: "DELETE",
-    })
-      .then((response) => {
-        if (response.ok) {
-          console.log("Host ID deleted from the database.");
-        } else {
-          console.error("Failed to delete Host ID.");
-        }
-      })
-      .catch((error) => {
-        console.error("Error deleting Host ID:", error);
-      });
   }
 
   // TODO for debugging
@@ -231,6 +233,16 @@ export default function VipGame() {
               </button>
             </form>
           )}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div
+          className={`${
+            fadeOut ? "opacity-0" : "opacity-100"
+          } transition-opacity duration-500 ease-out p-4 bg-yellow-100 text-red-600 rounded-md mb-4`}
+        >
+          {errorMessage}
         </div>
       )}
 

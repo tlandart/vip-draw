@@ -1,4 +1,5 @@
 import { Peer } from "peerjs";
+import { createHost } from "./dbApi";
 
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
@@ -104,29 +105,23 @@ export function peerHost(
 
   peer.on("open", async function (id) {
     console.log("starting peer.", id);
+  
+    if (!id) {
+      console.error("Error: Peer ID is empty. Cannot create host.");
+      return;
+    }
+  
     idLabelRef.current.innerHTML = "Host ID: " + id;
-
+  
     gameSt = { ...gameSt, start: 1, playerCount: 1, ids: [id] };
     setGame(gameSt);
-
-    // Send the host ID to the backend
+  
     try {
-      const response = await fetch("http://localhost:4000/create-host", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ hostId: id }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to store Host ID.");
-      }
-
-      const data = await response.json();
-      console.log(data.message); 
+      // Store the host ID in the database
+      const response = await createHost(id);
+      console.log("Host created successfully:", response.message);
     } catch (error) {
-      console.error("Error storing Host ID:", error);
+      console.error("Failed to store Host ID:", error);
     }
   });
 
