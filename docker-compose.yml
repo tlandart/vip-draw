@@ -1,0 +1,32 @@
+version: "2"
+
+services:
+  # nginx reverse proxy
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      # - ./certs:/etc/nginx/certs
+      - ./vhost:/etc/nginx/vhost.d
+      - ./html:/usr/share/nginx/html
+
+  # frontend
+  frontend:
+    image: frontend
+    container_name: frontend
+    restart: always
+    environment:
+      - VIRTUAL_HOST=${FRONTEND_DOMAIN}
+
+  # backend
+  backend:
+    image: backend
+    container_name: backend
+    restart: always
+    environment:
+      - VIRTUAL_HOST=${BACKEND_DOMAIN}
