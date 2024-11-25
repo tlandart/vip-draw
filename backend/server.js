@@ -45,18 +45,22 @@ app.use(function (req, res, next) {
   next();
 });
 
-const redisClient = createClient();
+// const redisClient = createClient();
 
-redisClient.on("connect", () => {
-  console.log("Connected to Redis.");
-});
+// redisClient.on("connect", () => {
+//   console.log("Connected to Redis.");
+// });
 
-redisClient.on("error", (err) => {
-  console.error("Redis error:", err);
-});
+// redisClient.on("error", (err) => {
+//   console.error("Redis error:", err);
+// });
 
-redisClient.connect().catch((err) => {
-  console.error("Failed to connect to Redis:", err);
+// redisClient.connect().catch((err) => {
+//   console.error("Failed to connect to Redis:", err);
+// });
+
+app.get("/api/ping", (req, res) => {
+  res.json("pong");
 });
 
 app.get("/get-game/:hostId", async (req, res) => {

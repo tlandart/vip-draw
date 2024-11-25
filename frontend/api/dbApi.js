@@ -1,3 +1,25 @@
+function handleResponse(res) {
+  if (res.status != 200) {
+    return res.text().then((text) => {
+      throw new Error(`${text} (status: ${res.status})`);
+    });
+  }
+  return res.json();
+}
+
+export function ping() {
+  fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/ping`)
+    .then(handleResponse)
+    .then(
+      (res) => {
+        console.log(`received response from PING: ${res}`);
+      },
+      (err) => {
+        console.error(`received error from PING: ${err}`);
+      }
+    );
+}
+
 export async function createHost(hostId) {
   try {
     console.log("Attempting to create host with ID:", hostId);

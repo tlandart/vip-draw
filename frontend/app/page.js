@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
+import { ping } from "../api/dbApi";
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -35,11 +36,16 @@ export default function Home() {
       });
 
       if (response.ok) {
-        alert(isSignUp ? "Account created successfully!" : "Signed in successfully!");
-        setShowForm(false); 
+        alert(
+          isSignUp ? "Account created successfully!" : "Signed in successfully!"
+        );
+        setShowForm(false);
       } else {
         const data = await response.json();
-        setError(data.message || (isSignUp ? "Failed to create account" : "Failed to sign in"));
+        setError(
+          data.message ||
+            (isSignUp ? "Failed to create account" : "Failed to sign in")
+        );
       }
     } catch (error) {
       console.error(`Error during ${isSignUp ? "sign-up" : "sign-in"}:`, error);
@@ -77,6 +83,7 @@ export default function Home() {
 
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
+      <button onClick={() => ping()}>ping</button>
       <div className="relative h-screen w-full">
         <div className="absolute top-20 right-2">
           <button
@@ -92,7 +99,9 @@ export default function Home() {
 
         {showForm && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">
-            <h2 className="text-xl mb-4">{isSignUp ? "Create an Account" : "Sign In"}</h2>
+            <h2 className="text-xl mb-4">
+              {isSignUp ? "Create an Account" : "Sign In"}
+            </h2>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <form onSubmit={handleFormSubmit}>
               {isSignUp && (
@@ -135,9 +144,15 @@ export default function Home() {
                 className="bg-blue-500 text-white p-2 rounded w-full"
                 disabled={loading}
               >
-                {loading ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
+                {loading
+                  ? isSignUp
+                    ? "Signing Up..."
+                    : "Signing In..."
+                  : isSignUp
+                  ? "Sign Up"
+                  : "Sign In"}
               </button>
-              
+
               {!isSignUp && (
                 <button
                   type="button"
@@ -154,10 +169,7 @@ export default function Home() {
                 onFailure={handleGoogleLoginFailure}
               />
             </div>
-            <button
-              onClick={() => setShowForm(false)}
-              className="mt-2"
-            >
+            <button onClick={() => setShowForm(false)} className="mt-2">
               Cancel
             </button>
           </div>
