@@ -13,31 +13,6 @@ const client = new OAuth2Client(CLIENT_ID);
 
 app.use(bodyParser.json());
 
-// app.use(
-//   cors({
-//     origin: process.env.FRONTEND, // Allow frontend to access backend
-//     methods: ["POST"],
-//   })
-// );
-
-// app.use((req, res, next) => {
-//   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-//   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-//   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND);
-//   res.setHeader("Access-Control-Allow-Credentials", "true");
-//   next();
-// });
-
-// app.use((req, res, next) => {
-//   req.header("Access-Control-Allow-Origin", "*");
-//   req.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-//   req.header("Access-Control-Allow-Headers", "Content-Type");
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-//   res.header("Access-Control-Allow-Headers", "Content-Type");
-//   next();
-// });
-
 app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Origin", process.env.FRONTEND);
   res.header("Access-Control-Allow-Headers", "Content-Type");
@@ -45,19 +20,22 @@ app.use(function (req, res, next) {
   next();
 });
 
-// const redisClient = createClient();
+const redisClient = createClient({
+  host: process.env.REDIS_HOST,
+  port: 6379,
+});
 
-// redisClient.on("connect", () => {
-//   console.log("Connected to Redis.");
-// });
+redisClient.on("connect", () => {
+  console.log("Connected to Redis.");
+});
 
-// redisClient.on("error", (err) => {
-//   console.error("Redis error:", err);
-// });
+redisClient.on("error", (err) => {
+  console.error("Redis client error:", err);
+});
 
-// redisClient.connect().catch((err) => {
-//   console.error("Failed to connect to Redis:", err);
-// });
+redisClient.connect().catch((err) => {
+  console.error("Failed to connect to Redis:", err);
+});
 
 app.get("/api/ping", (req, res) => {
   res.json("pong");

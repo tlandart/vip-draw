@@ -28,12 +28,16 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
+    depends_on:
+      - redis-stack
 
-  # redis server
-  # redis:
-  #   image: redis
-  #   command: redis-server /usr/local/etc/redis/redis.conf
-  #   volumes:
-  #     - ./redis.conf:/usr/local/etc/redis/redis.conf
-  #   ports:
-  #     - "6379"
+  # redis server (not accessed by nginx)
+  redis-stack:
+    image: redis/redis-stack-server:latest
+    # command: redis-server /usr/local/etc/redis/redis.conf
+    # volumes:
+    #   - ./redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_ARGS="--requirepass 1234"

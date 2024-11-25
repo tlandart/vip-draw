@@ -8,6 +8,7 @@ function handleResponse(res) {
 }
 
 export function ping() {
+  console.log("ping...");
   fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/ping`)
     .then(handleResponse)
     .then(
