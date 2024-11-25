@@ -173,6 +173,7 @@ app.post("/api/google-login", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on ${process.env.FRONTEND}`);
+app.listen(PORT, (err) => {
+  if (err) console.log(err);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

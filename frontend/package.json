@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "env-cmd next dev",
+    "build": "env-cmd next build",
+    "start": "env-cmd next start",
     "lint": "next lint"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
+    "env-cmd": "^10.1.0",
     "next": "15.0.1",
     "peerjs": "^1.5.4",
     "react": "^18.3.1",
