@@ -30,10 +30,10 @@ services:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
 
   # redis server
-  redis:
-    image: redis
-    command: redis-server /usr/local/etc/redis/redis.conf
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-    ports:
-      - "6379"
+  # redis:
+  #   image: redis
+  #   command: redis-server /usr/local/etc/redis/redis.conf
+  #   volumes:
+  #     - ./redis.conf:/usr/local/etc/redis/redis.conf
+  #   ports:
+  #     - "6379"
