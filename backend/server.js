@@ -1,42 +1,45 @@
-const express = require('express');
-const { createClient } = require('redis');
-const bodyParser = require('body-parser');
-const cors = require('cors');
-const { OAuth2Client } = require('google-auth-library');
+const express = require("express");
+const { createClient } = require("redis");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const { OAuth2Client } = require("google-auth-library");
 
 const app = express();
 const PORT = 4000;
 
-const CLIENT_ID = '821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com';
+const CLIENT_ID =
+  "821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
 
 app.use(bodyParser.json());
-app.use(cors({
-  origin: 'http://localhost:3000',  // Allow frontend to access backend
-  methods: ['POST'],
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND, // Allow frontend to access backend
+    methods: ["POST"],
+  })
+);
 
 app.use((req, res, next) => {
-  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
-  res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
   next();
 });
 
 const redisClient = createClient();
 
-redisClient.on('connect', () => {
-  console.log('Connected to Redis.');
+redisClient.on("connect", () => {
+  console.log("Connected to Redis.");
 });
 
-redisClient.on('error', (err) => {
-  console.error('Redis error:', err);
+redisClient.on("error", (err) => {
+  console.error("Redis error:", err);
 });
 
 redisClient.connect().catch((err) => {
-  console.error('Failed to connect to Redis:', err);
+  console.error("Failed to connect to Redis:", err);
 });
 
-app.get('/get-game/:hostId', async (req, res) => {
+app.get("/get-game/:hostId", async (req, res) => {
   const { hostId } = req.params;
   console.log(`Attempting to retrieve Host ID: ${hostId}`);
 
@@ -45,42 +48,44 @@ app.get('/get-game/:hostId', async (req, res) => {
 
     if (reply) {
       console.log(`Host ID found: ${hostId} with status ${reply}`);
-      res.status(200).send({ message: `Host ID ${hostId} is active.`, status: reply });
+      res
+        .status(200)
+        .send({ message: `Host ID ${hostId} is active.`, status: reply });
     } else {
       console.error(`Host ID not found in Redis: ${hostId}`);
       res.status(404).send({ message: `Host ID ${hostId} not found.` });
     }
   } catch (err) {
-    console.error('Error retrieving Host ID:', err);
-    res.status(500).send({ message: 'Failed to retrieve Host ID.' });
+    console.error("Error retrieving Host ID:", err);
+    res.status(500).send({ message: "Failed to retrieve Host ID." });
   }
 });
 
-app.post('/create-host', async (req, res) => {
+app.post("/create-host", async (req, res) => {
   const { hostId } = req.body;
 
   if (!hostId) {
-    return res.status(400).send({ message: 'Host ID is required.' });
+    return res.status(400).send({ message: "Host ID is required." });
   }
 
   try {
-    await redisClient.set(hostId, 'active', { EX: 3600 });
+    await redisClient.set(hostId, "active", { EX: 3600 });
     console.log(`Host ID ${hostId} stored successfully.`);
     res.send({ message: `Host ID ${hostId} created successfully.` });
   } catch (err) {
-    console.error('Error storing Host ID:', err);
-    res.status(500).send({ message: 'Failed to store Host ID.' });
+    console.error("Error storing Host ID:", err);
+    res.status(500).send({ message: "Failed to store Host ID." });
   }
 });
 
-app.delete('/delete-game/:hostId', (req, res) => {
+app.delete("/delete-game/:hostId", (req, res) => {
   const { hostId } = req.params;
   console.log(`Attempting to delete Host ID: ${hostId}`);
 
   redisClient.del(hostId, (err, reply) => {
     if (err) {
       console.error("Error deleting Host ID from Redis:", err);
-      return res.status(500).send('Internal Server Error');
+      return res.status(500).send("Internal Server Error");
     }
 
     if (reply === 1) {
@@ -93,17 +98,17 @@ app.delete('/delete-game/:hostId', (req, res) => {
   });
 });
 
-app.post('/api/signup', async (req, res) => {
+app.post("/api/signup", async (req, res) => {
   const { name, email } = req.body;
 
   if (!name || !email) {
-    return res.status(400).json({ message: 'Name and email are required.' });
+    return res.status(400).json({ message: "Name and email are required." });
   }
 
   try {
     const existingUser = await redisClient.hGetAll(`user:${email}`);
     if (Object.keys(existingUser).length !== 0) {
-      return res.status(400).json({ message: 'Email already in use.' });
+      return res.status(400).json({ message: "Email already in use." });
     }
 
     // currently no password
@@ -113,41 +118,40 @@ app.post('/api/signup', async (req, res) => {
     });
 
     console.log("User created:", { name, email });
-    res.status(201).json({ message: 'Account created successfully.' });
+    res.status(201).json({ message: "Account created successfully." });
   } catch (error) {
-    console.error('Error during signup:', error);
-    res.status(500).json({ message: 'Failed to create account' });
+    console.error("Error during signup:", error);
+    res.status(500).json({ message: "Failed to create account" });
   }
 });
 
-app.post('/api/signin', async (req, res) => {
+app.post("/api/signin", async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-    return res.status(400).json({ message: 'Email is required.' });
+    return res.status(400).json({ message: "Email is required." });
   }
 
   try {
     const existingUser = await redisClient.hGetAll(`user:${email}`);
 
     if (Object.keys(existingUser).length === 0) {
-      return res.status(400).json({ message: 'User not found.' });
+      return res.status(400).json({ message: "User not found." });
     }
 
     console.log("User signed in:", { email });
-    res.status(200).json({ message: 'Signed in successfully.' });
-
+    res.status(200).json({ message: "Signed in successfully." });
   } catch (error) {
-    console.error('Error during sign-in:', error);
-    res.status(500).json({ message: 'Failed to sign in' });
+    console.error("Error during sign-in:", error);
+    res.status(500).json({ message: "Failed to sign in" });
   }
 });
 
-app.post('/api/google-login', async (req, res) => {
+app.post("/api/google-login", async (req, res) => {
   const { credential } = req.body;
 
   if (!credential) {
-    return res.status(400).send({ message: 'Credential is required.' });
+    return res.status(400).send({ message: "Credential is required." });
   }
 
   try {
@@ -162,13 +166,13 @@ app.post('/api/google-login', async (req, res) => {
     await redisClient.set(`user:${sub}`, JSON.stringify({ email, name }));
 
     console.log(`User ${email} stored successfully.`);
-    res.send({ message: 'User authenticated successfully.' });
+    res.send({ message: "User authenticated successfully." });
   } catch (err) {
-    console.error('Error verifying Google ID token:', err);
-    res.status(500).send({ message: 'Failed to authenticate user.' });
+    console.error("Error verifying Google ID token:", err);
+    res.status(500).send({ message: "Failed to authenticate user." });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on ${process.env.FRONTEND}`);
 });
