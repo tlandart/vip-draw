@@ -2,9 +2,13 @@ const express = require('express');
 const { createClient } = require('redis');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
 const PORT = 4000;
+
+const CLIENT_ID = '821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com';
+const client = new OAuth2Client(CLIENT_ID);
 
 app.use(bodyParser.json());
 app.use(cors({
@@ -136,6 +140,32 @@ app.post('/api/signin', async (req, res) => {
   } catch (error) {
     console.error('Error during sign-in:', error);
     res.status(500).json({ message: 'Failed to sign in' });
+  }
+});
+
+app.post('/api/google-login', async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).send({ message: 'Credential is required.' });
+  }
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub, email, name } = payload;
+
+    await redisClient.set(`user:${sub}`, JSON.stringify({ email, name }));
+
+    console.log(`User ${email} stored successfully.`);
+    res.send({ message: 'User authenticated successfully.' });
+  } catch (err) {
+    console.error('Error verifying Google ID token:', err);
+    res.status(500).send({ message: 'Failed to authenticate user.' });
   }
 });
 

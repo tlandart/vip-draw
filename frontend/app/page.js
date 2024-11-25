@@ -49,12 +49,30 @@ export default function Home() {
     }
   };
 
-  const handleGoogleLoginSuccess = (response) => {
-    console.log("Google user signed in:", response);
+  const handleGoogleLoginSuccess = async (response) => {
+    try {
+      const res = await fetch("http://localhost:4000/api/google-login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+
+      if (res.ok) {
+        alert("Google login successful!");
+      } else {
+        setError("Failed to login with Google");
+      }
+    } catch (error) {
+      console.error("Error during Google login:", error);
+      setError("Failed to login with Google");
+    }
   };
 
   const handleGoogleLoginFailure = (error) => {
     console.error("Google login error:", error);
+    setError("Google login failed");
   };
 
   return (
