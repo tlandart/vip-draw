@@ -19,10 +19,18 @@ app.use(
   })
 );
 
+// app.use((req, res, next) => {
+//   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+//   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
+//   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND);
+//   res.setHeader("Access-Control-Allow-Credentials", "true");
+//   next();
+// });
+
 app.use((req, res, next) => {
-  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-  res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-  res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND);
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
+  res.header("Access-Control-Allow-Headers", "Content-Type");
   next();
 });
 
