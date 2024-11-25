@@ -1,5 +1,3 @@
-version: "2"
-
 services:
   # nginx reverse proxy
   nginx-proxy:
@@ -30,3 +28,12 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
+
+  # redis server
+  redis:
+    image: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
