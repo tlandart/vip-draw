@@ -34,7 +34,7 @@ services:
 
   # redis
   redis:
-    image: redis:latest
+    image: redis/redis-stack-server:latest
     container_name: redis
     restart: always
 
