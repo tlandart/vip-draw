@@ -3,6 +3,7 @@ const { createClient } = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { OAuth2Client } = require("google-auth-library");
+const session = require("express-session");
 
 const app = express();
 const PORT = 4000;
@@ -23,8 +24,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-session = require("express-session");
 
 app.use(
   session({
