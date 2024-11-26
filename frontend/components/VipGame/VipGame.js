@@ -31,6 +31,7 @@ export default function VipGame() {
   const [errorMessage, setErrorMessage] = useState(""); // State to store error message
   const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
   const [waitingForHost, setWaitingForHost] = useState(false);
+  const [reactions, setReactions] = useState([]);
 
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
@@ -111,6 +112,16 @@ export default function VipGame() {
     setShowHostJoinButtons(false);
     setShowBackButton(true);
   }
+
+  const handleReaction = (reaction) => {
+    const newReaction = { reaction, timestamp: Date.now() };
+    setReactions((prevReactions) => [...prevReactions, newReaction]);
+    setTimeout(() => {
+      setReactions((prevReactions) =>
+        prevReactions.filter((r) => r.timestamp !== newReaction.timestamp)
+      );
+    }, 2000);
+  };
 
   const handleJoinGameClick = () => {
     setIsJoinGameClicked((prevState) => !prevState);
@@ -295,36 +306,50 @@ export default function VipGame() {
 
       {gameState.start === 2 && (
         <>
-          <div className="bg-orange-600 text-white p-2 text-center">
-            {gameState.timeLeft}
+          <div className="text-center mt-4">
+            {showCanvas && (
+              <>
+                <span className="block text-xl">Draw!</span>
+                <span className="block text-xl">Word: {gameState.currentWord}</span>
+              </>
+            )}
+            <div>{gameState.timeLeft}</div>
           </div>
-          {showCanvas && (
-            <div className="text-center mt-4">
-              <span className="block text-xl">Draw!</span>
-              <span className="block text-xl">
-                Word: {gameState.currentWord}
-              </span>
-            </div>
-          )}
-          <div className="flex flex-col items-center justify-center h-screen">
+          <div className="flex flex-row items-center justify-center h-screen relative">
             {playerNum.current !== gameState.currentPlayer && (
               <span className="block text-xl">Guess!</span>
             )}
-            <VipCanvas
-              className={`m-2 ${showCanvas ? "" : "hidden"}`}
-              setStream={setStream}
-              setCanvasSaveFunc={setCanvasSaveFunc}
-              width={300}
-              height={300}
-              lineWidth={5}
-              minDist={1}
-            />
+            <div className="relative flex justify-center">
+              <VipCanvas
+                className={`m-2 ${showCanvas ? "" : "hidden"}`}
+                setStream={setStream}
+                setCanvasSaveFunc={setCanvasSaveFunc}
+                width={300}
+                height={300}
+                lineWidth={5}
+                minDist={1}
+              />
+              {reactions.map((r, index) => (
+                <div
+                  key={index}
+                  className="absolute text-3xl"
+                  style={{
+                    top: `${50 + Math.random() * 200}px`,
+                    left: `${380 + Math.random() * 200}px`,
+                  }}
+                >
+                  {r.reaction}
+                </div>
+              ))}
+            </div>
             {playerNum.current !== gameState.currentPlayer &&
               videoElems.current[showVideoNum]}
             <VipMessages
               messages={gameState.messages}
               inputGuessRef={inputGuessRef}
               handleGuess={handleGuess}
+              handleReaction={handleReaction}
+              className="ml-6"
             />
           </div>
         </>
