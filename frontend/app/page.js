@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";

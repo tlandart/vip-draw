@@ -24,6 +24,8 @@ app.use((req, res, next) => {
   next();
 });
 
+session = require("express-session");
+
 app.use(
   session({
     secret: "vip",
