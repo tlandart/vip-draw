@@ -12,6 +12,9 @@ services:
       # - ./certs:/etc/nginx/certs
       - ./vhost:/etc/nginx/vhost.d
       - ./html:/usr/share/nginx/html
+    depends_on:
+      - frontend
+      - backend
 
   # frontend
   frontend:
@@ -28,12 +31,13 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
+    depends_on:
+      - redis
 
-  # redis server
+  # redis
   redis:
-    image: redis
-    command: redis-server /usr/local/etc/redis/redis.conf
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
+    image: redis/redis-stack-server:latest
+    container_name: redis
+    restart: always
     ports:
-      - "6379"
+      - "6379:6379"

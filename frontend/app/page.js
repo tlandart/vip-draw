@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
+import { ping } from "../api/dbApi";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -42,13 +43,22 @@ export default function Home() {
       });
 
       if (response.ok) {
-        alert(isSignUp ? "Account created successfully!" : "Signed in successfully!");
+        alert(
+          isSignUp ? "Account created successfully!" : "Signed in successfully!"
+        );
+        setShowForm(false);
+        alert(
+          isSignUp ? "Account created successfully!" : "Signed in successfully!"
+        );
         localStorage.setItem("user", email);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
         const data = await response.json();
-        setError(data.message || (isSignUp ? "Failed to create account" : "Failed to sign in"));
+        setError(
+          data.message ||
+            (isSignUp ? "Failed to create account" : "Failed to sign in")
+        );
       }
     } catch (error) {
       console.error(`Error during ${isSignUp ? "sign-up" : "sign-in"}:`, error);
@@ -95,23 +105,24 @@ export default function Home() {
       },
       body: JSON.stringify({ email: user }),
     })
-    .then(response => {
-      if (response.ok) {
-        alert("Logged out successfully");
-        localStorage.removeItem("user");
-        setIsAuthenticated(false);
-      } else {
+      .then((response) => {
+        if (response.ok) {
+          alert("Logged out successfully");
+          localStorage.removeItem("user");
+          setIsAuthenticated(false);
+        } else {
+          setError("Failed to log out");
+        }
+      })
+      .catch((error) => {
+        console.error("Error during logout:", error);
         setError("Failed to log out");
-      }
-    })
-    .catch(error => {
-      console.error("Error during logout:", error);
-      setError("Failed to log out");
-    });
+      });
   };
 
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
+      <button onClick={() => ping()}>ping</button>
       <div className="relative h-screen w-full">
         <div className="absolute top-20 right-2">
           {isAuthenticated ? (
@@ -121,7 +132,7 @@ export default function Home() {
             >
               Log Out
             </button>
-          ):(
+          ) : (
             <button
               onClick={() => {
                 setShowForm(!showForm);
@@ -136,7 +147,9 @@ export default function Home() {
 
         {showForm && !isAuthenticated && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">
-            <h2 className="text-xl mb-4">{isSignUp ? "Create an Account" : "Sign In"}</h2>
+            <h2 className="text-xl mb-4">
+              {isSignUp ? "Create an Account" : "Sign In"}
+            </h2>
             {error && <p className="text-red-500 text-sm">{error}</p>}
             <form onSubmit={handleFormSubmit}>
               <div className="mb-4">
@@ -166,9 +179,15 @@ export default function Home() {
                 className="bg-blue-500 text-white p-2 rounded w-full"
                 disabled={loading}
               >
-                {loading ? (isSignUp ? "Signing Up..." : "Signing In...") : (isSignUp ? "Sign Up" : "Sign In")}
+                {loading
+                  ? isSignUp
+                    ? "Signing Up..."
+                    : "Signing In..."
+                  : isSignUp
+                  ? "Sign Up"
+                  : "Sign In"}
               </button>
-              
+
               {!isSignUp && (
                 <button
                   type="button"
@@ -185,10 +204,7 @@ export default function Home() {
                 onFailure={handleGoogleLoginFailure}
               />
             </div>
-            <button
-              onClick={() => setShowForm(false)}
-              className="mt-2"
-            >
+            <button onClick={() => setShowForm(false)} className="mt-2">
               Cancel
             </button>
           </div>

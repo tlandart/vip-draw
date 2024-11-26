@@ -3,8 +3,7 @@ const { createClient } = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { OAuth2Client } = require("google-auth-library");
-const session = require('express-session');
-const bcrypt = require('bcrypt');
+const session = require("express-session");
 
 const app = express();
 const PORT = 4000;
@@ -14,34 +13,6 @@ const CLIENT_ID =
 const client = new OAuth2Client(CLIENT_ID);
 
 app.use(bodyParser.json());
-
-const corsOptions = {
-  origin: 'http://localhost:3000',
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-  allowedHeaders: ["Content-Type"],
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable preflight requests
-
-// app.use((req, res, next) => {
-//   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
-//   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
-//   res.setHeader("Access-Control-Allow-Origin", process.env.FRONTEND);
-//   res.setHeader("Access-Control-Allow-Credentials", "true");
-//   next();
-// });
-
-// app.use((req, res, next) => {
-//   req.header("Access-Control-Allow-Origin", "*");
-//   req.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-//   req.header("Access-Control-Allow-Headers", "Content-Type");
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE");
-//   res.header("Access-Control-Allow-Headers", "Content-Type");
-//   next();
-// });
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "http://localhost:3000");
@@ -54,26 +25,33 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(session({
-  secret: 'vip',
-  resave: false,
-  saveUninitialized: true,
-  cookie: { secure: false } 
-}));
+app.use(
+  session({
+    secret: "vip",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false },
+  })
+);
 
-
-const redisClient = createClient();
+const redisClient = createClient({
+  url: `redis://${process.env.REDIS_HOST}:6379`,
+});
 
 redisClient.on("connect", () => {
   console.log("Connected to Redis.");
 });
 
 redisClient.on("error", (err) => {
-  console.error("Redis error:", err);
+  console.error("Redis client error:", err);
 });
 
 redisClient.connect().catch((err) => {
   console.error("Failed to connect to Redis:", err);
+});
+
+app.get("/api/ping", (req, res) => {
+  res.json("pong");
 });
 
 app.get("/get-game/:hostId", async (req, res) => {
@@ -138,8 +116,8 @@ app.delete("/delete-game/:hostId", (req, res) => {
 app.post("/api/signup", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required." });
+  if (!name || !email) {
+    return res.status(400).json({ message: "Name and email are required." });
   }
 
   try {
@@ -152,7 +130,6 @@ app.post("/api/signup", async (req, res) => {
 
     await redisClient.hSet(`user:${email}`, {
       email,
-      password: hashedPassword
     });
 
     console.log("User created:", { email });
@@ -166,8 +143,8 @@ app.post("/api/signup", async (req, res) => {
 app.post("/api/signin", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required." });
+  if (!email) {
+    return res.status(400).json({ message: "Email is required." });
   }
 
   try {
