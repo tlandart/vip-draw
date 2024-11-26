@@ -21,7 +21,7 @@ app.use(function (req, res, next) {
 });
 
 const redisClient = createClient({
-  host: "http://draw-db.tlandart.me",
+  host: "redis",
   port: 6379,
 });
 
