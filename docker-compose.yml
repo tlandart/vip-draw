@@ -12,6 +12,9 @@ services:
       # - ./certs:/etc/nginx/certs
       - ./vhost:/etc/nginx/vhost.d
       - ./html:/usr/share/nginx/html
+    depends_on:
+      - frontend
+      - backend
 
   # frontend
   frontend:
@@ -28,7 +31,6 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
-      - REDIS_HOST=${REDIS_HOST}
     depends_on:
       - redis
 
