@@ -23,10 +23,7 @@ app.use(function (req, res, next) {
 console.log("process.env.REDIS_HOST value is ", process.env.REDIS_HOST);
 
 const redisClient = createClient({
-  socket: {
-    host: process.env.REDIS_HOST,
-    port: 6379,
-  },
+  url: `redis://${process.env.REDIS_HOST}:6379`,
 });
 
 redisClient.on("connect", () => {
