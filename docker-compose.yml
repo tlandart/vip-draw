@@ -31,6 +31,7 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
+      - REDIS_HOST=redis
     depends_on:
       - redis
 
