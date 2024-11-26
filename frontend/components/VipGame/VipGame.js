@@ -86,6 +86,14 @@ export default function VipGame() {
     [gameState]
   );
 
+  useEffect(() => {
+    if (gameState.start === 0 && playerNum.current !== -1 && playerNum.current !== 0) {
+      setWaitingForHost(true); 
+    } else {
+      setWaitingForHost(false);
+    }
+  }, [gameState.start, playerNum.current]);
+
   async function handleHost() {
     playerNum.current = 0;
   
@@ -281,36 +289,36 @@ export default function VipGame() {
 
       {gameState.start === 2 && (
         <>
-          <div className="bg-orange-600 text-white p-2">
+          <div className="bg-orange-600 text-white p-2 text-center">
             {gameState.timeLeft}
           </div>
           {showCanvas && (
-            <>
-              <span className="block text-xl">Draw!</span>{" "}
-              <span className="block text-xl">
-                Word: {gameState.currentWord}
-              </span>
-            </>
+            <div className="text-center mt-4">
+              <span className="block text-xl">Draw!</span>
+              <span className="block text-xl">Word: {gameState.currentWord}</span>
+            </div>
           )}
-          {playerNum.current !== gameState.currentPlayer && (
-            <span className="block text-xl">Guess!</span>
-          )}
-          <VipCanvas
-            className={`m-2 ${showCanvas ? "" : "hidden"}`}
-            setStream={setStream}
-            setCanvasSaveFunc={setCanvasSaveFunc}
-            width={300}
-            height={300}
-            lineWidth={5}
-            minDist={1}
-          />
-          {playerNum.current !== gameState.currentPlayer &&
-            videoElems.current[showVideoNum]}
-          <VipMessages
-            messages={gameState.messages}
-            inputGuessRef={inputGuessRef}
-            handleGuess={handleGuess}
-          />
+          <div className="flex flex-col items-center justify-center h-screen">
+            {playerNum.current !== gameState.currentPlayer && (
+              <span className="block text-xl">Guess!</span>
+            )}
+            <VipCanvas
+              className={`m-2 ${showCanvas ? "" : "hidden"}`}
+              setStream={setStream}
+              setCanvasSaveFunc={setCanvasSaveFunc}
+              width={300}
+              height={300}
+              lineWidth={5}
+              minDist={1}
+            />
+            {playerNum.current !== gameState.currentPlayer &&
+              videoElems.current[showVideoNum]}
+            <VipMessages
+              messages={gameState.messages}
+              inputGuessRef={inputGuessRef}
+              handleGuess={handleGuess}
+            />
+          </div>
         </>
       )}
     </>

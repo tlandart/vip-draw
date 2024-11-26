@@ -23,6 +23,7 @@ export default function VipCanvas({
   const oldMouse = useRef();
 
   const [isDrawing, setIsDrawing] = useState(false);
+  const [colour, setColour] = useState("#000000");
 
   // a line is an array of points (x,y)
   const currentLine = useRef([]);
@@ -55,7 +56,7 @@ export default function VipCanvas({
     ctxRef.current.fillRect(0, 0, width, height);
     ctxRef.current.lineWidth = lineWidth;
     ctxRef.current.lineCap = "round";
-    ctxRef.current.strokeStyle = "#000000";
+    ctxRef.current.strokeStyle = colour;
   }
 
   function drawLineSegment(x1, y1, x2, y2) {
@@ -130,8 +131,14 @@ export default function VipCanvas({
     drawDrawing(currentDrawing.current);
   }
 
+  function changeColour(newColour) {
+    setColour(newColour);
+    ctxRef.current.strokeStyle = newColour;
+  }
+
   return (
     <div className={className}>
+      <div className="flex justify-center">
       <canvas
         className={`bg-white h-[${height}px] w-[${width}px]`}
         width={width}
@@ -143,8 +150,59 @@ export default function VipCanvas({
         onMouseUp={endCurrentLine}
         onMouseLeave={endCurrentLine}
       ></canvas>
-      <button onClick={() => resetCanvas(true)}>[Reset]</button>
-      <button onClick={undoLastLine}>[Undo]</button>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => changeColour("#000000")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#000000" }}
+        ></button>
+        <button
+          onClick={() => changeColour("#FF0000")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#FF0000" }}
+        ></button>
+        <button
+          onClick={() => changeColour("#00FF00")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#00FF00" }}
+        ></button>
+        <button
+          onClick={() => changeColour("#0000FF")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#0000FF" }}
+        ></button>
+        <button
+          onClick={() => changeColour("#FFFF00")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#FFFF00" }}
+        ></button>
+        <button
+          onClick={() => changeColour("#FFA500")}
+          className="w-8 h-8 rounded-full cursor-pointer transition-transform transform hover:scale-110"
+          style={{ background: "#FFA500" }}
+        ></button>
+        <input
+          type="color"
+          value={colour}
+          onChange={(e) => changeColour(e.target.value)}
+          className="w-8 h-8 cursor-pointer transition-transform transform"
+        />
+      </div>
+      <div className="flex flex-col items-center justify-center gap-4 mt-4">
+        <button
+          onClick={() => resetCanvas(true)}
+          className="px-4 py-2 rounded transition"
+        >
+          [Reset]
+        </button>
+        <button
+          onClick={undoLastLine}
+          className="px-4 py-2 rounded transition"
+        >
+          [Undo]
+        </button>
+      </div>
     </div>
   );
 }
