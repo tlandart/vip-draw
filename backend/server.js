@@ -3,6 +3,8 @@ const { createClient } = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const { OAuth2Client } = require("google-auth-library");
+const session = require('express-session');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = 4000;
@@ -13,12 +15,15 @@ const client = new OAuth2Client(CLIENT_ID);
 
 app.use(bodyParser.json());
 
-// app.use(
-//   cors({
-//     origin: process.env.FRONTEND, // Allow frontend to access backend
-//     methods: ["POST"],
-//   })
-// );
+const corsOptions = {
+  origin: 'http://localhost:3000',
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+  allowedHeaders: ["Content-Type"],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Enable preflight requests
 
 // app.use((req, res, next) => {
 //   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
@@ -38,12 +43,24 @@ app.use(bodyParser.json());
 //   next();
 // });
 
-app.use(function (req, res, next) {
-  res.header("Access-Control-Allow-Origin", process.env.FRONTEND);
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "http://localhost:3000");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type");
-  res.header("Access-Control-Allow-Methods", "*");
+  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
   next();
 });
+
+app.use(session({
+  secret: 'vip',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } 
+}));
+
 
 const redisClient = createClient();
 
@@ -119,10 +136,10 @@ app.delete("/delete-game/:hostId", (req, res) => {
 });
 
 app.post("/api/signup", async (req, res) => {
-  const { name, email } = req.body;
+  const { email, password } = req.body;
 
-  if (!name || !email) {
-    return res.status(400).json({ message: "Name and email are required." });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
@@ -131,13 +148,14 @@ app.post("/api/signup", async (req, res) => {
       return res.status(400).json({ message: "Email already in use." });
     }
 
-    // currently no password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     await redisClient.hSet(`user:${email}`, {
-      name,
       email,
+      password: hashedPassword
     });
 
-    console.log("User created:", { name, email });
+    console.log("User created:", { email });
     res.status(201).json({ message: "Account created successfully." });
   } catch (error) {
     console.error("Error during signup:", error);
@@ -146,10 +164,10 @@ app.post("/api/signup", async (req, res) => {
 });
 
 app.post("/api/signin", async (req, res) => {
-  const { email } = req.body;
+  const { email, password } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: "Email is required." });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
@@ -157,6 +175,12 @@ app.post("/api/signin", async (req, res) => {
 
     if (Object.keys(existingUser).length === 0) {
       return res.status(400).json({ message: "User not found." });
+    }
+
+    const match = await bcrypt.compare(password, existingUser.password);
+
+    if (!match) {
+      return res.status(400).json({ message: "Incorrect password." });
     }
 
     console.log("User signed in:", { email });
@@ -191,6 +215,15 @@ app.post("/api/google-login", async (req, res) => {
     console.error("Error verifying Google ID token:", err);
     res.status(500).send({ message: "Failed to authenticate user." });
   }
+});
+
+app.post("/api/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Failed to log out" });
+    }
+    res.status(200).json({ message: "Logged out successfully" });
+  });
 });
 
 app.listen(PORT, (err) => {

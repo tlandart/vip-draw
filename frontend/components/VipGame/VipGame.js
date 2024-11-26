@@ -30,6 +30,8 @@ export default function VipGame() {
   const [showBackButton, setShowBackButton] = useState(false); // State for the back button
   const [errorMessage, setErrorMessage] = useState(""); // State to store error message
   const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
+  const [waitingForHost, setWaitingForHost] = useState(false);
+  
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
   const [remoteStreams, setRemoteStreams] = useState([]); // the incoming streams from joined players
@@ -135,6 +137,7 @@ export default function VipGame() {
           setShowBackButton(true);
           setIsJoinGameClicked(false); 
           setErrorMessage(""); 
+          setWaitingForHost(true);
         }
       })
       .catch((err) => {
@@ -156,6 +159,7 @@ export default function VipGame() {
 
   function handleStart() {
     gameInit();
+    setWaitingForHost(false);
   }
 
   function handleGuess(event) {
@@ -250,6 +254,12 @@ export default function VipGame() {
         <button onClick={handleBack} className="back-button">
           &lt; Back
         </button>
+      )}
+
+      {waitingForHost && (
+        <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
+          Waiting for host to start the game...
+        </div>
       )}
 
       {gameState.start === 1 && playerNum.current === 0 && (
