@@ -21,7 +21,7 @@ app.use(function (req, res, next) {
 });
 
 const redisClient = createClient({
-  host: process.env.REDIS_HOST,
+  host: "redis",
   port: 6379,
 });
 
