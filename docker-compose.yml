@@ -41,14 +41,3 @@ services:
     restart: always
     ports:
       - "6379:6379"
-
-  # redis server (not accessed by nginx)
-  # redis-stack:
-  #   image: redis/redis-stack-server:latest
-  #   # command: redis-server /usr/local/etc/redis/redis.conf
-  #   # volumes:
-  #   #   - ./redis.conf:/usr/local/etc/redis/redis.conf
-  #   ports:
-  #     - "6379:6379"
-  #   # environment:
-  #   #   - REDIS_ARGS="--requirepass 1234"

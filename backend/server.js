@@ -20,8 +20,6 @@ app.use(function (req, res, next) {
   next();
 });
 
-console.log("process.env.REDIS_HOST value is ", process.env.REDIS_HOST);
-
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST}:6379`,
 });
