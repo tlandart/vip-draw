@@ -30,6 +30,8 @@ export default function VipGame() {
   const [showBackButton, setShowBackButton] = useState(false); // State for the back button
   const [errorMessage, setErrorMessage] = useState(""); // State to store error message
   const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
+  const [waitingForHost, setWaitingForHost] = useState(false);
+
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
   const [remoteStreams, setRemoteStreams] = useState([]); // the incoming streams from joined players
@@ -84,6 +86,18 @@ export default function VipGame() {
     [gameState]
   );
 
+  useEffect(() => {
+    if (
+      gameState.start === 0 &&
+      playerNum.current !== -1 &&
+      playerNum.current !== 0
+    ) {
+      setWaitingForHost(true);
+    } else {
+      setWaitingForHost(false);
+    }
+  }, [gameState.start, playerNum.current]);
+
   async function handleHost() {
     playerNum.current = 0;
 
@@ -135,6 +149,9 @@ export default function VipGame() {
           setShowBackButton(true);
           setIsJoinGameClicked(false);
           setErrorMessage("");
+          setIsJoinGameClicked(false);
+          setErrorMessage("");
+          setWaitingForHost(true);
         }
       })
       .catch((err) => {
@@ -154,6 +171,7 @@ export default function VipGame() {
 
   function handleStart() {
     gameInit();
+    setWaitingForHost(false);
   }
 
   function handleGuess(event) {
@@ -252,6 +270,12 @@ export default function VipGame() {
         </button>
       )}
 
+      {waitingForHost && (
+        <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
+          Waiting for host to start the game...
+        </div>
+      )}
+
       {gameState.start === 1 && playerNum.current === 0 && (
         <div className="start-button-container flex items-center justify-center h-screen">
           <button
@@ -271,36 +295,38 @@ export default function VipGame() {
 
       {gameState.start === 2 && (
         <>
-          <div className="bg-orange-600 text-white p-2">
+          <div className="bg-orange-600 text-white p-2 text-center">
             {gameState.timeLeft}
           </div>
           {showCanvas && (
-            <>
-              <span className="block text-xl">Draw!</span>{" "}
+            <div className="text-center mt-4">
+              <span className="block text-xl">Draw!</span>
               <span className="block text-xl">
                 Word: {gameState.currentWord}
               </span>
-            </>
+            </div>
           )}
-          {playerNum.current !== gameState.currentPlayer && (
-            <span className="block text-xl">Guess!</span>
-          )}
-          <VipCanvas
-            className={`m-2 ${showCanvas ? "" : "hidden"}`}
-            setStream={setStream}
-            setCanvasSaveFunc={setCanvasSaveFunc}
-            width={300}
-            height={300}
-            lineWidth={5}
-            minDist={1}
-          />
-          {playerNum.current !== gameState.currentPlayer &&
-            videoElems.current[showVideoNum]}
-          <VipMessages
-            messages={gameState.messages}
-            inputGuessRef={inputGuessRef}
-            handleGuess={handleGuess}
-          />
+          <div className="flex flex-col items-center justify-center h-screen">
+            {playerNum.current !== gameState.currentPlayer && (
+              <span className="block text-xl">Guess!</span>
+            )}
+            <VipCanvas
+              className={`m-2 ${showCanvas ? "" : "hidden"}`}
+              setStream={setStream}
+              setCanvasSaveFunc={setCanvasSaveFunc}
+              width={300}
+              height={300}
+              lineWidth={5}
+              minDist={1}
+            />
+            {playerNum.current !== gameState.currentPlayer &&
+              videoElems.current[showVideoNum]}
+            <VipMessages
+              messages={gameState.messages}
+              inputGuessRef={inputGuessRef}
+              handleGuess={handleGuess}
+            />
+          </div>
         </>
       )}
     </>
