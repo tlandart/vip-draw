@@ -19,10 +19,14 @@ app.use(function (req, res, next) {
   res.header("Access-Control-Allow-Methods", "*");
   next();
 });
+
 console.log("process.env.REDIS_HOST value is ", process.env.REDIS_HOST);
+
 const redisClient = createClient({
-  host: process.env.REDIS_HOST,
-  port: 6379,
+  socket: {
+    host: process.env.REDIS_HOST,
+    port: 6379,
+  },
 });
 
 redisClient.on("connect", () => {

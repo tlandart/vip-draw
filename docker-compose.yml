@@ -31,7 +31,6 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
-      - REDIS_HOST=redis
     depends_on:
       - redis
 
@@ -40,6 +39,8 @@ services:
     image: redis/redis-stack-server:latest
     container_name: redis
     restart: always
+    environment:
+      - VIRTUAL_HOST=${REDIS_HOST}
     ports:
       - "6379:6379"
 
