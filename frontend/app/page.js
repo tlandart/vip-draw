@@ -46,10 +46,6 @@ export default function Home() {
         alert(
           isSignUp ? "Account created successfully!" : "Signed in successfully!"
         );
-        setShowForm(false);
-        alert(
-          isSignUp ? "Account created successfully!" : "Signed in successfully!"
-        );
         localStorage.setItem("user", email);
         setIsAuthenticated(true);
         setShowForm(false);

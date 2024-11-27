@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const cors = require("cors");
 const { OAuth2Client } = require("google-auth-library");
 const session = require("express-session");
+const bcrypt = require('bcrypt');
 
 const app = express();
 const PORT = 4000;
@@ -116,8 +117,8 @@ app.delete("/delete-game/:hostId", (req, res) => {
 app.post("/api/signup", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!name || !email) {
-    return res.status(400).json({ message: "Name and email are required." });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
@@ -130,6 +131,7 @@ app.post("/api/signup", async (req, res) => {
 
     await redisClient.hSet(`user:${email}`, {
       email,
+      password: hashedPassword
     });
 
     console.log("User created:", { email });
@@ -143,8 +145,8 @@ app.post("/api/signup", async (req, res) => {
 app.post("/api/signin", async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email) {
-    return res.status(400).json({ message: "Email is required." });
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required." });
   }
 
   try {
