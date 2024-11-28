@@ -7,12 +7,15 @@ import { ping } from "../api/dbApi";
 
 export default function Home() {
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [newUsername, setNewUsername] = useState(username);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -23,7 +26,7 @@ export default function Home() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-
+  
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
@@ -31,7 +34,7 @@ export default function Home() {
 
     setLoading(true);
     setError("");
-
+  
     try {
       const endpoint = isSignUp ? "signup" : "signin";
       const response = await fetch(`http://localhost:4000/api/${endpoint}`, {
@@ -41,20 +44,15 @@ export default function Home() {
         },
         body: JSON.stringify({ email, password }),
       });
-
+  
       if (response.ok) {
-        alert(
-          isSignUp ? "Account created successfully!" : "Signed in successfully!"
-        );
+        alert(isSignUp ? "Account created successfully!" : "Signed in successfully!");
         localStorage.setItem("user", email);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
         const data = await response.json();
-        setError(
-          data.message ||
-            (isSignUp ? "Failed to create account" : "Failed to sign in")
-        );
+        setError(data.message || (isSignUp ? "Failed to create account" : "Failed to sign in"));
       }
     } catch (error) {
       console.error(`Error during ${isSignUp ? "sign-up" : "sign-in"}:`, error);
@@ -63,6 +61,7 @@ export default function Home() {
       setLoading(false);
     }
   };
+  
 
   const handleGoogleLoginSuccess = async (response) => {
     try {
@@ -76,7 +75,9 @@ export default function Home() {
 
       if (res.ok) {
         alert("Google login successful!");
-        localStorage.setItem("user", "google");
+        const data = await res.json();
+        const userEmail = data.user.email;
+        localStorage.setItem("user", userEmail);
         setIsAuthenticated(true);
       } else {
         setError("Failed to login with Google");
@@ -106,6 +107,7 @@ export default function Home() {
           alert("Logged out successfully");
           localStorage.removeItem("user");
           setIsAuthenticated(false);
+          setShowProfile(false);
         } else {
           setError("Failed to log out");
         }
@@ -116,6 +118,60 @@ export default function Home() {
       });
   };
 
+  const fetchUserProfile = async (userEmail) => {
+    try {
+      const response = await fetch(`http://localhost:4000/api/get-profile/${userEmail}`);
+      if (response.ok) {
+        const profile = await response.json();
+        setUsername(profile.username);
+        setEmail(profile.email);
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    }
+  };
+  
+  const handleProfileClick = () => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      fetchUserProfile(user);
+      setShowProfile(true);
+    }
+  };
+
+  const handleUsernameChange = (e) => {
+    setNewUsername(e.target.value);
+  };
+
+  const handleUsernameSubmit = async () => {
+    try {
+      const userEmail = localStorage.getItem("user");
+  
+      const response = await fetch(`http://localhost:4000/api/update-username`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          username: newUsername,
+        }),
+      });
+  
+      if (response.ok) {
+        setUsername(newUsername);
+        alert("Username updated successfully!");
+      } else {
+        const data = await response.json();
+        alert(data.message || "Failed to update username.");
+      }
+    } catch (error) {
+      console.error("Error updating username:", error);
+      alert("Error updating username.");
+    }
+  };
+  
+
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
       <button onClick={() => ping()}>ping</button>
@@ -123,10 +179,10 @@ export default function Home() {
         <div className="absolute top-20 right-2">
           {isAuthenticated ? (
             <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white p-2 rounded"
+              onClick={handleProfileClick}
+              className="bg-blue-500 text-white p-2 rounded"
             >
-              Log Out
+              Open Profile
             </button>
           ) : (
             <button
@@ -140,6 +196,47 @@ export default function Home() {
             </button>
           )}
         </div>
+
+        {showProfile && (
+          <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
+            <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
+              <button
+                onClick={() => setShowProfile(false)}
+                className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
+              >
+                X
+              </button>
+              <h2 className="text-xl font-bold mb-4">Profile</h2>
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm">Username: {username}</label>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="text"
+                    value={newUsername}
+                    onChange={handleUsernameChange}
+                    className="w-full p-2 border border-gray-300 rounded mr-2"
+                    placeholder="Enter a new username"
+                  />
+                  <button
+                    onClick={handleUsernameSubmit}
+                    className="bg-blue-500 text-white p-2 rounded"
+                  >
+                    Update
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="bg-red-500 text-white p-2 rounded mt-4 mx-auto"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        )}
+
 
         {showForm && !isAuthenticated && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">

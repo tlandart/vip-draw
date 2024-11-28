@@ -313,12 +313,12 @@ export default function VipGame() {
                 <span className="block text-xl">Word: {gameState.currentWord}</span>
               </>
             )}
-            <div>{gameState.timeLeft}</div>
-          </div>
-          <div className="flex flex-row items-center justify-center h-screen relative">
             {playerNum.current !== gameState.currentPlayer && (
               <span className="block text-xl">Guess!</span>
             )}
+            <div>{gameState.timeLeft}</div>
+          </div>
+          <div className="flex flex-row items-center justify-center h-screen relative">
             <div className="relative flex justify-center">
               <VipCanvas
                 className={`m-2 ${showCanvas ? "" : "hidden"}`}

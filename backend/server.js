@@ -120,21 +120,24 @@ app.post("/api/signup", async (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required." });
   }
-
+  
   try {
     const existingUser = await redisClient.hGetAll(`user:${email}`);
     if (Object.keys(existingUser).length !== 0) {
       return res.status(400).json({ message: "Email already in use." });
     }
-
+    
+    const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await redisClient.hSet(`user:${email}`, {
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      username: defaultUsername,
     });
 
     console.log("User created:", { email });
+    console.log("Name:", { defaultUsername });
     res.status(201).json({ message: "Account created successfully." });
   } catch (error) {
     console.error("Error during signup:", error);
@@ -185,14 +188,63 @@ app.post("/api/google-login", async (req, res) => {
 
     const payload = ticket.getPayload();
     const { sub, email, name } = payload;
+    let user = await redisClient.hGetAll(`user:${email}`);
 
-    await redisClient.set(`user:${sub}`, JSON.stringify({ email, name }));
+    if (Object.keys(user).length === 0) {
+      const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
+      await redisClient.hSet(`user:${email}`, {
+        email,
+        username: defaultUsername,
+      });
+      user = { email, username: defaultUsername };
+      console.log(`New user created for ${email} with username ${defaultUsername}.`);
+    } else {
+      console.log(`User ${email} already exists.`);
+    }
 
-    console.log(`User ${email} stored successfully.`);
-    res.send({ message: "User authenticated successfully." });
+    res.send({ message: "User authenticated successfully.", user });
   } catch (err) {
     console.error("Error verifying Google ID token:", err);
     res.status(500).send({ message: "Failed to authenticate user." });
+  }
+});
+
+app.get("/api/get-profile/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const userProfile = await redisClient.hGetAll(`user:${email}`);
+
+    if (Object.keys(userProfile).length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    res.status(200).json(userProfile);
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    res.status(500).json({ message: "Failed to fetch user profile" });
+  }
+});
+
+app.post("/api/update-username", async (req, res) => {
+  const { email, username } = req.body;
+
+  if (!email || !username) {
+    return res.status(400).json({ message: "Email and username are required." });
+  }
+
+  try {
+    const user = await redisClient.hGetAll(`user:${email}`);
+
+    if (Object.keys(user).length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    
+    await redisClient.hSet(`user:${email}`, { username });
+    res.status(200).json({ message: "Username updated successfully." });
+  } catch (error) {
+    console.error("Error updating username:", error);
+    res.status(500).json({ message: "Failed to update username." });
   }
 });
 
