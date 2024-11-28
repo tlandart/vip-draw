@@ -105,17 +105,17 @@ export function peerHost(
 
   peer.on("open", async function (id) {
     console.log("starting peer.", id);
-  
+
     if (!id) {
       console.error("Error: Peer ID is empty. Cannot create host.");
       return;
     }
-  
+
     idLabelRef.current.innerHTML = "Host ID: " + id;
-  
+
     gameSt = { ...gameSt, start: 1, playerCount: 1, ids: [id] };
     setGame(gameSt);
-  
+
     try {
       // Store the host ID in the database
       const response = await createHost(id);
@@ -150,10 +150,17 @@ export function peerHost(
       calls.push(call);
     });
 
-    c.on("data", function ({ playerNum: playerNum, guess: guess }) {
-      // peerGuessSend()'s request ends up here
-      console.log("received guess", guess, "from player", playerNum);
-      gameGuessReceived(playerNum, guess);
+    c.on("data", function ({ playerNum: playerNum, message: message }) {
+      // peerMessageSend()'s request ends up here.
+      // now we can process it like how a host's message is processed
+      console.log("received message", message, "from player", playerNum);
+
+      if (/^react:.{1}$/u.test(message)) {
+        // matches only "react:*" where * is any character including emojis
+        gameReact(message.substring(6));
+      } else {
+        gameGuess(playerNum, message);
+      }
     });
   });
 }
@@ -238,12 +245,12 @@ export function peerHostSend() {
   }
 }
 
-// sends a guess made by a remote player (non-host)
+// sends a message made by a remote player (non-host)
 // *only a remote player should call this function*
-function peerGuessSend(playerNum, guess) {
+function peerMessageSend(playerNum, message) {
   if (hostConn && hostConn.open) {
-    hostConn.send({ playerNum: playerNum, guess: guess });
-    console.log("sent guess", playerNum, guess);
+    hostConn.send({ playerNum: playerNum, message: message });
+    console.log("sent message", playerNum, message);
   } else {
     console.error("Connection to host does not exist or is not open.");
   }
@@ -339,20 +346,27 @@ export function gameInit() {
     currentWord: randomWord(),
     timeLeft: TIMER_DEFAULT, // time left until next stage
     messages: [],
+    reactions: [],
   };
   restartTime();
   peerHostSend(gameSt);
   setGame(gameSt);
 }
 
-// guess by playerNum. updates client gameState accordingly
-export function gameGuess(playerNum, guess) {
+// message sent by playerNum. updates client gameState accordingly
+// note that a "reaction" is just a message "react:*". So players can send custom reactions.
+export function gameMessage(playerNum, message) {
   if (playerNum === 0) {
-    // host. can process guess immediately
-    gameGuessReceived(playerNum, guess);
+    // host. can process message immediately
+    if (/^react:.{1}$/u.test(message)) {
+      // matches only "react:*" where * is any character including emojis
+      gameReact(message.substring(6));
+    } else {
+      gameGuess(playerNum, message);
+    }
   } else {
-    // remote player. must send guess to host for processing
-    peerGuessSend(playerNum, guess);
+    // remote player. must send message to host for processing
+    peerMessageSend(playerNum, message);
   }
 }
 
@@ -362,9 +376,10 @@ function addMessage(msg) {
   gameSt.messages = gameSt.messages.slice(-5);
 }
 
-// guess is received by host connection
-// handles the actual logic for a guess
-function gameGuessReceived(playerNum, guess) {
+// guess received by host connection
+// handles the actual logic for a guess.
+// should only be called by the host client
+function gameGuess(playerNum, guess) {
   if (
     playerNum !== gameSt.currentPlayer &&
     guess === gameSt.currentWord &&
@@ -394,7 +409,7 @@ function gameGuessReceived(playerNum, guess) {
       // correct guess and not all players guessed it yet.
       gameSt = {
         ...gameSt,
-        playerSave: -1, // current player should save their drawing
+        playerSave: -1,
         points: points,
         correctPlayers: [...gameSt.correctPlayers, playerNum],
       };
@@ -409,6 +424,30 @@ function gameGuessReceived(playerNum, guess) {
   }
   setGame(gameSt);
   peerHostSend();
+}
+
+function gameReact(reactionCode) {
+  const newReaction = { reaction: reactionCode, timestamp: Date.now() };
+
+  gameSt = {
+    ...gameSt,
+    reactions: [...gameSt.reactions, newReaction],
+    playerSave: -1,
+  };
+  setGame(gameSt);
+  peerHostSend();
+
+  setTimeout(() => {
+    gameSt = {
+      ...gameSt,
+      reactions: gameSt.reactions.filter(
+        (r) => r.timestamp !== newReaction.timestamp
+      ),
+      playerSave: -1,
+    };
+    setGame(gameSt);
+    peerHostSend();
+  }, 2000); // remove the reaction that we just added 2 seconds later
 }
 
 // change timer to "seconds"

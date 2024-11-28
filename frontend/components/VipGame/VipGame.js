@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import {
   TIMER_DEFAULT,
-  gameGuess,
+  gameMessage,
   gameInit,
   peerUpdateStream,
   peerHost,
@@ -12,7 +12,7 @@ import {
 import VipCanvas from "../VipCanvas/VipCanvas";
 import VipMessages from "../VipMessages/VipMessages";
 import VipTimer from "../VipTimer/VipTimer";
-import { createHost, deleteGame, checkGame } from "../../api/dbApi";
+import { deleteGame, checkGame } from "../../api/dbApi";
 
 /* The main multiplayer game. */
 
@@ -26,11 +26,9 @@ export default function VipGame() {
   const inputGuessRef = useRef(null); // guess input element
 
   const [isJoinGameClicked, setIsJoinGameClicked] = useState(false); // State to track if the Join Game button was clicked
-  const [showHostJoinButtons, setShowHostJoinButtons] = useState(true); // State to control visibility of host/join buttons
   const [showBackButton, setShowBackButton] = useState(false); // State for the back button
   const [errorMessage, setErrorMessage] = useState(""); // State to store error message
   const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
-  const [waitingForHost, setWaitingForHost] = useState(false);
   const [reactions, setReactions] = useState([]);
 
   // game logic
@@ -87,18 +85,6 @@ export default function VipGame() {
     [gameState]
   );
 
-  useEffect(() => {
-    if (
-      gameState.start === 0 &&
-      playerNum.current !== -1 &&
-      playerNum.current !== 0
-    ) {
-      setWaitingForHost(true);
-    } else {
-      setWaitingForHost(false);
-    }
-  }, [gameState.start, playerNum.current]);
-
   async function handleHost() {
     playerNum.current = 0;
 
@@ -109,19 +95,8 @@ export default function VipGame() {
       console.error("Failed to start host:", error);
     }
 
-    setShowHostJoinButtons(false);
     setShowBackButton(true);
   }
-
-  const handleReaction = (reaction) => {
-    const newReaction = { reaction, timestamp: Date.now() };
-    setReactions((prevReactions) => [...prevReactions, newReaction]);
-    setTimeout(() => {
-      setReactions((prevReactions) =>
-        prevReactions.filter((r) => r.timestamp !== newReaction.timestamp)
-      );
-    }, 2000);
-  };
 
   const handleJoinGameClick = () => {
     setIsJoinGameClicked((prevState) => !prevState);
@@ -162,7 +137,6 @@ export default function VipGame() {
           setErrorMessage("");
           setIsJoinGameClicked(false);
           setErrorMessage("");
-          setWaitingForHost(true);
         }
       })
       .catch((err) => {
@@ -182,14 +156,13 @@ export default function VipGame() {
 
   function handleStart() {
     gameInit();
-    setWaitingForHost(false);
   }
 
-  function handleGuess(event) {
+  function handleMessage(event) {
     event.preventDefault();
     const guess = inputGuessRef.current.value.trim();
     inputGuessRef.current.value = "";
-    gameGuess(playerNum.current, guess);
+    gameMessage(playerNum.current, guess);
   }
 
   function handleTimerChange(seconds) {
@@ -213,7 +186,6 @@ export default function VipGame() {
     peerDisconnect(stream);
 
     setShowBackButton(false); // Hide back button when going back
-    setShowHostJoinButtons(true); // Show the host/join buttons again
     setIsJoinGameClicked(false); // Hide the join game input field
     setGameState({ start: 0, playerCount: 0 }); // Reset game state
 
@@ -281,12 +253,6 @@ export default function VipGame() {
         </button>
       )}
 
-      {waitingForHost && (
-        <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
-          Waiting for host to start the game...
-        </div>
-      )}
-
       {gameState.start === 1 && playerNum.current === 0 && (
         <div className="start-button-container flex items-center justify-center h-screen">
           <button
@@ -295,6 +261,12 @@ export default function VipGame() {
           >
             [Start]
           </button>
+        </div>
+      )}
+
+      {gameState.start === 1 && playerNum.current !== 0 && (
+        <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
+          Waiting for host to start the game...
         </div>
       )}
 
@@ -310,7 +282,9 @@ export default function VipGame() {
             {showCanvas && (
               <>
                 <span className="block text-xl">Draw!</span>
-                <span className="block text-xl">Word: {gameState.currentWord}</span>
+                <span className="block text-xl">
+                  Word: {gameState.currentWord}
+                </span>
               </>
             )}
             {playerNum.current !== gameState.currentPlayer && (
@@ -329,26 +303,15 @@ export default function VipGame() {
                 lineWidth={5}
                 minDist={1}
               />
-              {reactions.map((r, index) => (
-                <div
-                  key={index}
-                  className="absolute text-3xl"
-                  style={{
-                    top: `${50 + Math.random() * 200}px`,
-                    left: `${380 + Math.random() * 200}px`,
-                  }}
-                >
-                  {r.reaction}
-                </div>
-              ))}
             </div>
             {playerNum.current !== gameState.currentPlayer &&
               videoElems.current[showVideoNum]}
             <VipMessages
               messages={gameState.messages}
+              reactions={gameState.reactions}
               inputGuessRef={inputGuessRef}
-              handleGuess={handleGuess}
-              handleReaction={handleReaction}
+              handleMessage={handleMessage}
+              playerNum={playerNum.current}
               className="ml-6"
             />
           </div>
