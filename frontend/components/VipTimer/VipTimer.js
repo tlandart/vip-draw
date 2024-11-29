@@ -3,7 +3,7 @@ import { useTimer } from "react-timer-hook";
 
 /* The game timer. Uses react-timer-hook. It is an invisible component, but onTimerChange can be used every time the seconds left changes. */
 
-export default function VipCanvas({
+export default function VipTimer({
   secondsInit,
   setRestartTimerFunc,
   onTimerChange,

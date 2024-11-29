@@ -25,8 +25,10 @@ export default function VipCanvas({
   const [isDrawing, setIsDrawing] = useState(false);
   const [colour, setColour] = useState("#000000");
 
-  // a line is an array of points (x,y)
-  const currentLine = useRef([]);
+  // a line is an object with:
+  // colour: the colour of the line (a string like "#FF00AA")
+  // points: an array of points (x,y)
+  const currentLine = useRef({ colour: colour, points: [] });
 
   // array of all lines (will be replaced with DB)
   const currentDrawing = useRef([]);
@@ -48,7 +50,7 @@ export default function VipCanvas({
 
   function resetCanvas(deleteStoredDrawing = false) {
     if (deleteStoredDrawing) {
-      currentLine.current = [];
+      currentLine.current = { colour: colour, points: [] };
       currentDrawing.current = [];
     }
     ctxRef.current.reset();
@@ -78,7 +80,7 @@ export default function VipCanvas({
   function startCurrentLine(e) {
     if (!isDrawing && e.buttons == 1) {
       var p = getMousePosition(e);
-      currentLine.current = [p];
+      currentLine.current = { colour: colour, points: [p] };
       drawLineSegment(p.x, p.y, p.x, p.y);
       setIsDrawing(true);
     }
@@ -94,7 +96,7 @@ export default function VipCanvas({
           Math.pow(p.y - oldMouse.current.y, 2)
       );
       if (cur_dist > minDist) {
-        currentLine.current.push({ x: p.x, y: p.y });
+        currentLine.current.points.push({ x: p.x, y: p.y });
         drawLineSegment(oldMouse.current.x, oldMouse.current.y, p.x, p.y);
         oldMouse.current = { x: p.x, y: p.y };
       }
@@ -139,17 +141,17 @@ export default function VipCanvas({
   return (
     <div className={className}>
       <div className="flex justify-center">
-      <canvas
-        className={`bg-white h-[${height}px] w-[${width}px]`}
-        width={width}
-        height={height}
-        ref={canvasRef}
-        onMouseMove={(e) => addCurrentLine(e)}
-        onMouseDown={(e) => startCurrentLine(e)}
-        onMouseEnter={(e) => startCurrentLine(e)}
-        onMouseUp={endCurrentLine}
-        onMouseLeave={endCurrentLine}
-      ></canvas>
+        <canvas
+          className={`bg-white h-[${height}px] w-[${width}px]`}
+          width={width}
+          height={height}
+          ref={canvasRef}
+          onMouseMove={(e) => addCurrentLine(e)}
+          onMouseDown={(e) => startCurrentLine(e)}
+          onMouseEnter={(e) => startCurrentLine(e)}
+          onMouseUp={endCurrentLine}
+          onMouseLeave={endCurrentLine}
+        ></canvas>
       </div>
       <div className="flex gap-2 mt-3">
         <button
@@ -196,10 +198,7 @@ export default function VipCanvas({
         >
           [Reset]
         </button>
-        <button
-          onClick={undoLastLine}
-          className="px-4 py-2 rounded transition"
-        >
+        <button onClick={undoLastLine} className="px-4 py-2 rounded transition">
           [Undo]
         </button>
       </div>

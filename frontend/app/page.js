@@ -31,7 +31,7 @@ export default function Home() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-  
+
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
@@ -39,7 +39,7 @@ export default function Home() {
 
     setLoading(true);
     setError("");
-  
+
     try {
       const endpoint = isSignUp ? "signup" : "signin";
       const response = await fetch(`http://localhost:4000/api/${endpoint}`, {
@@ -49,15 +49,20 @@ export default function Home() {
         },
         body: JSON.stringify({ email, password }),
       });
-  
+
       if (response.ok) {
-        alert(isSignUp ? "Account created successfully!" : "Signed in successfully!");
+        alert(
+          isSignUp ? "Account created successfully!" : "Signed in successfully!"
+        );
         localStorage.setItem("user", email);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
         const data = await response.json();
-        setError(data.message || (isSignUp ? "Failed to create account" : "Failed to sign in"));
+        setError(
+          data.message ||
+            (isSignUp ? "Failed to create account" : "Failed to sign in")
+        );
       }
     } catch (error) {
       console.error(`Error during ${isSignUp ? "sign-up" : "sign-in"}:`, error);
@@ -66,7 +71,6 @@ export default function Home() {
       setLoading(false);
     }
   };
-  
 
   const handleGoogleLoginSuccess = async (response) => {
     try {
@@ -125,7 +129,9 @@ export default function Home() {
 
   const fetchUserProfile = async (userEmail) => {
     try {
-      const response = await fetch(`http://localhost:4000/api/get-profile/${userEmail}`);
+      const response = await fetch(
+        `http://localhost:4000/api/get-profile/${userEmail}`
+      );
       if (response.ok) {
         const profile = await response.json();
         setUsername(profile.username);
@@ -142,7 +148,7 @@ export default function Home() {
       console.error("Error fetching user profile:", error);
     }
   };
-  
+
   const handleProfileClick = () => {
     const user = localStorage.getItem("user");
     if (user) {
@@ -158,18 +164,21 @@ export default function Home() {
   const handleUsernameSubmit = async () => {
     try {
       const userEmail = localStorage.getItem("user");
-  
-      const response = await fetch(`http://localhost:4000/api/update-username`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          username: newUsername,
-        }),
-      });
-  
+
+      const response = await fetch(
+        `http://localhost:4000/api/update-username`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            username: newUsername,
+          }),
+        }
+      );
+
       if (response.ok) {
         setUsername(newUsername);
         alert("Username updated successfully!");
