@@ -5,6 +5,7 @@ const cors = require("cors");
 const { OAuth2Client } = require("google-auth-library");
 const session = require("express-session");
 const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = 4000;
@@ -127,14 +128,19 @@ app.post("/api/signup", async (req, res) => {
       return res.status(400).json({ message: "Email already in use." });
     }
     
+    const personalId = uuidv4();
     const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await redisClient.hSet(`user:${email}`, {
       email,
+      personalId,
       password: hashedPassword,
       username: defaultUsername,
+      followers: 0,
+      following: 0,
     });
+    await redisClient.hSet(`personalId:${personalId}`, "email", email);
 
     console.log("User created:", { email });
     console.log("Name:", { defaultUsername });
@@ -192,14 +198,25 @@ app.post("/api/google-login", async (req, res) => {
 
     if (Object.keys(user).length === 0) {
       const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
+      const personalId = sub;
+      const followers = 0;
+      const following = 0;
+
       await redisClient.hSet(`user:${email}`, {
         email,
         username: defaultUsername,
+        personalId,
+        followers: followers.toString(),
+        following: following.toString(),
       });
-      user = { email, username: defaultUsername };
+      await redisClient.hSet(`personalId:${personalId}`, "email", email);
+
+      user = { email, username: defaultUsername, personalId, followers, following };
       console.log(`New user created for ${email} with username ${defaultUsername}.`);
     } else {
       console.log(`User ${email} already exists.`);
+      user.followers = user.followers || 0;
+      user.following = user.following || 0;
     }
 
     res.send({ message: "User authenticated successfully.", user });
@@ -208,6 +225,7 @@ app.post("/api/google-login", async (req, res) => {
     res.status(500).send({ message: "Failed to authenticate user." });
   }
 });
+
 
 app.get("/api/get-profile/:email", async (req, res) => {
   const { email } = req.params;
@@ -256,6 +274,106 @@ app.post("/api/logout", (req, res) => {
     res.status(200).json({ message: "Logged out successfully" });
   });
 });
+
+app.get("/api/get-follow-counts/:email", async (req, res) => {
+  const { email } = req.params;
+
+  try {
+    const user = await redisClient.hGetAll(`user:${email}`);
+
+    if (Object.keys(user).length === 0) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const followers = user.followers || 0;
+    const following = user.following || 0;
+
+    res.status(200).json({ followers, following });
+  } catch (error) {
+    console.error("Error fetching user follow counts:", error);
+    res.status(500).json({ message: "Failed to fetch follow counts" });
+  }
+});
+
+app.post("/api/follow", async (req, res) => {
+  const { email, personalId } = req.body;
+
+  console.log("Received follow request:", req.body);
+
+  if (!email || !personalId) {
+    return res.status(400).json({ message: "Both email and personalId are required." });
+  }
+
+  try {
+    const follower = await redisClient.hGetAll(`user:${email}`);
+    const followingEmail = await redisClient.hGet(`personalId:${personalId}`, "email");
+    const following = await redisClient.hGetAll(`user:${followingEmail}`);
+
+    if (Object.keys(follower).length === 0 || !followingEmail || Object.keys(following).length === 0) {
+      return res.status(404).json({ message: "One or both users not found." });
+    }
+
+    const followKey = `following:${email}`;
+    const alreadyFollowing = await redisClient.sIsMember(followKey, followingEmail);
+
+    if (alreadyFollowing) {
+      return res.status(400).json({ message: "You are already following this user." });
+    }
+
+    await redisClient.multi()
+      .sAdd(followKey, followingEmail)
+      .sAdd(`followers:${followingEmail}`, email)
+      .hIncrBy(`user:${email}`, "following", 1)
+      .hIncrBy(`user:${followingEmail}`, "followers", 1)
+      .exec();
+
+    res.status(200).json({ message: `${email} is now following ${followingEmail}.` });
+  } catch (error) {
+    console.error("Error following user:", error);
+    res.status(500).json({ message: "Failed to follow user." });
+  }
+});
+
+
+app.post("/api/unfollow", async (req, res) => {
+  const { email, personalId } = req.body;
+
+  console.log("Received unfollow request:", req.body);
+
+  if (!email || !personalId) {
+    return res.status(400).json({ message: "Both email and personalId are required." });
+  }
+
+  try {
+    const follower = await redisClient.hGetAll(`user:${email}`);
+    const followingEmail = await redisClient.hGet(`personalId:${personalId}`, "email");
+    const following = await redisClient.hGetAll(`user:${followingEmail}`);
+
+    if (Object.keys(follower).length === 0 || !followingEmail || Object.keys(following).length === 0) {
+      return res.status(404).json({ message: "One or both users not found." });
+    }
+
+    const followKey = `following:${email}`;
+    const alreadyFollowing = await redisClient.sIsMember(followKey, followingEmail);
+
+    if (!alreadyFollowing) {
+      return res.status(400).json({ message: "You are not following this user." });
+    }
+
+    await redisClient.multi()
+      .sRem(followKey, followingEmail)
+      .sRem(`followers:${followingEmail}`, email)
+      .hIncrBy(`user:${email}`, "following", -1)
+      .hIncrBy(`user:${followingEmail}`, "followers", -1)
+      .exec();
+
+    res.status(200).json({ message: `${email} has unfollowed ${followingEmail}.` });
+  } catch (error) {
+    console.error("Error unfollowing user:", error);
+    res.status(500).json({ message: "Failed to unfollow user." });
+  }
+});
+
 
 app.listen(PORT, (err) => {
   if (err) console.log(err);

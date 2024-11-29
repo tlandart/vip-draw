@@ -10,12 +10,17 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [newUsername, setNewUsername] = useState(username);
   const [password, setPassword] = useState("");
+  const [followers, setFollowers] = useState(0); 
+  const [following, setFollowing] = useState(0);
+  const [personalId, setPersonalId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showFollowPanel, setShowFollowPanel] = useState(false);
+  const [followPersonalId, setFollowPersonalId] = useState("");
 
   useEffect(() => {
     const user = localStorage.getItem("user");
@@ -125,6 +130,13 @@ export default function Home() {
         const profile = await response.json();
         setUsername(profile.username);
         setEmail(profile.email);
+        setPersonalId(profile.personalId);
+        const countResponse = await fetch(`http://localhost:4000/api/get-follow-counts/${userEmail}`);
+        if (countResponse.ok) {
+          const { followers, following } = await countResponse.json();
+          setFollowers(followers);
+          setFollowing(following);
+        }
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -171,6 +183,52 @@ export default function Home() {
     }
   };
   
+  const handleFollowSubmit = async () => {
+    const userEmail = localStorage.getItem("user");
+    if (!userEmail) {
+      setError("User not authenticated");
+      return;
+    }
+  
+    try {
+      console.log('Sending follow request:', { email: userEmail, personalId: followPersonalId });
+  
+      const response = await fetch(`http://localhost:4000/api/follow`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: userEmail,
+          personalId: followPersonalId,
+        }),
+      });
+  
+      if (response.ok) {
+        const data = await response.json();
+        setFollowing((prev) => prev + 1);
+        alert("Followed successfully!");
+        setShowFollowPanel(false);
+      } else {
+        const data = await response.json();
+        if (data.message === "You are already following this user.") {
+          setError("You are already following this user.");
+        } else {
+          setError(data.message || "Failed to follow");
+        }
+      }
+    } catch (error) {
+      console.error("Error following user:", error);
+      setError("Error following user");
+    }
+  };
+  
+
+  
+
+  const handleFollowPanelClose = () => {
+    setShowFollowPanel(false);
+  };
 
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
@@ -227,6 +285,14 @@ export default function Home() {
                   </button>
                 </div>
               </div>
+              <div className="mb-4">
+                <div className="flex justify-between items-center">
+                  <label className="block text-sm">Followers: {followers}</label>
+                  <label className="block text-sm">Following: {following}</label>
+                  <label className="block text-sm">Personal ID: {personalId}</label>
+                </div>
+              </div>
+
               <button
                 onClick={handleLogout}
                 className="bg-red-500 text-white p-2 rounded mt-4 mx-auto"
@@ -236,7 +302,49 @@ export default function Home() {
             </div>
           </div>
         )}
+        <div className="absolute bottom-20 right-2">
+          {isAuthenticated && (
+            <button
+              onClick={() => setShowFollowPanel(true)}
+              className="bg-blue-500 text-white p-2 rounded"
+            >
+              Follow Someone
+            </button>
+          )}
+        </div>
 
+        {showFollowPanel && (
+          <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
+            <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
+              <button
+                onClick={handleFollowPanelClose}
+                className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
+              >
+                X
+              </button>
+              <h2 className="text-xl font-bold mb-4">Follow Someone</h2>
+              {error && (
+                <p className="text-red-500 text-sm mb-4">{error}</p>
+              )}
+              <div className="mb-4">
+                <label className="block text-sm">Enter Personal ID:</label>
+                <input
+                  type="text"
+                  value={followPersonalId}
+                  onChange={(e) => setFollowPersonalId(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded mt-2"
+                  placeholder="Personal ID"
+                />
+              </div>
+              <button
+                onClick={handleFollowSubmit}
+                className="bg-blue-500 text-white p-2 rounded mt-4"
+              >
+                Follow
+              </button>
+            </div>
+          </div>
+        )}
 
         {showForm && !isAuthenticated && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">

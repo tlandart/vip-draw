@@ -15,7 +15,8 @@
     "express": "^4.21.1",
     "express-session": "^1.18.1",
     "google-auth-library": "^9.15.0",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "uuid": "^11.0.3"
   },
   "keywords": [],
   "description": ""
