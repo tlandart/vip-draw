@@ -278,42 +278,41 @@ export default function VipGame() {
 
       {gameState.start === 2 && (
         <>
-          <div className="text-center mt-4">
-            {showCanvas && (
-              <>
-                <span className="block text-xl">Draw!</span>
-                <span className="block text-xl">
-                  Word: {gameState.currentWord}
-                </span>
-              </>
-            )}
-            {playerNum.current !== gameState.currentPlayer && (
-              <span className="block text-xl">Guess!</span>
-            )}
-            <div>{gameState.timeLeft}</div>
-          </div>
-          <div className="flex flex-row items-center justify-center h-screen relative">
-            <div className="relative flex justify-center">
-              <VipCanvas
-                className={`m-2 ${showCanvas ? "" : "hidden"}`}
-                setStream={setStream}
-                setCanvasSaveFunc={setCanvasSaveFunc}
-                width={300}
-                height={300}
-                lineWidth={5}
-                minDist={1}
+          <div className="game-container bg-purple-900 text-white p-6 rounded-lg shadow-lg w-full md:w-3/4 mx-auto mt-6">
+            <div className="text-center mt-4">
+              {showCanvas && (
+                <>
+                  <span className="block text-xl">Draw!</span>
+                  <span className="block text-xl">Word: {gameState.currentWord}</span>
+                </>
+              )}
+              {playerNum.current !== gameState.currentPlayer && (
+                <span className="block text-xl">Guess!</span>
+              )}
+              <div>{gameState.timeLeft}</div>
+            </div>
+            <div className="flex flex-row items-center justify-center h-screen relative">
+              <div className="relative flex justify-center">
+                <VipCanvas
+                  className={`m-2 ${showCanvas ? "" : "hidden"}`}
+                  setStream={setStream}
+                  setCanvasSaveFunc={setCanvasSaveFunc}
+                  width={300}
+                  height={300}
+                  lineWidth={5}
+                  minDist={1}
+                />
+              </div>
+              {playerNum.current !== gameState.currentPlayer && videoElems.current[showVideoNum]}
+              <VipMessages
+                messages={gameState.messages}
+                reactions={gameState.reactions}
+                inputGuessRef={inputGuessRef}
+                handleMessage={handleMessage}
+                playerNum={playerNum.current}
+                className="ml-6"
               />
             </div>
-            {playerNum.current !== gameState.currentPlayer &&
-              videoElems.current[showVideoNum]}
-            <VipMessages
-              messages={gameState.messages}
-              reactions={gameState.reactions}
-              inputGuessRef={inputGuessRef}
-              handleMessage={handleMessage}
-              playerNum={playerNum.current}
-              className="ml-6"
-            />
           </div>
         </>
       )}
