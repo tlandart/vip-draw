@@ -54,19 +54,21 @@ export default function VipCanvas({
       currentDrawing.current = [];
     }
     ctxRef.current.reset();
-    ctxRef.current.fillStyle = "#ffffff";
+    ctxRef.current.fillStyle = "#ffffff"; // bg colour
     ctxRef.current.fillRect(0, 0, width, height);
     ctxRef.current.lineWidth = lineWidth;
     ctxRef.current.lineCap = "round";
-    ctxRef.current.strokeStyle = colour;
+    ctxRef.current.strokeStyle = colour; // line colour
   }
 
-  function drawLineSegment(x1, y1, x2, y2) {
+  function drawLineSegment(x1, y1, x2, y2, lineColour) {
+    ctxRef.current.strokeStyle = lineColour;
     ctxRef.current.beginPath(); // <- important to reduce lag
     ctxRef.current.moveTo(x1, y1);
     ctxRef.current.lineTo(x2, y2);
     ctxRef.current.stroke();
     ctxRef.current.closePath(); // <- important to reduce lag
+    ctxRef.current.strokeStyle = colour; // set it back to what user picked
   }
 
   function getMousePosition(e) {
@@ -114,13 +116,26 @@ export default function VipCanvas({
 
   // draw a full drawing (an array of lines)
   function drawDrawing(lines) {
+    console.log(lines);
     for (const line of lines) {
-      if (line.length === 1) {
-        drawLineSegment(line[0].x, line[0].y, line[0].x, line[0].y);
-      } else if (line.length > 1) {
-        let lastPoint = line[0];
-        for (const point of line.slice(1)) {
-          drawLineSegment(lastPoint.x, lastPoint.y, point.x, point.y);
+      if (line.points.length === 1) {
+        drawLineSegment(
+          line.points[0].x,
+          line.points[0].y,
+          line.points[0].x,
+          line.points[0].y,
+          line.colour
+        );
+      } else if (line.points.length > 1) {
+        let lastPoint = line.points[0];
+        for (const point of line.points.slice(1)) {
+          drawLineSegment(
+            lastPoint.x,
+            lastPoint.y,
+            point.x,
+            point.y,
+            line.colour
+          );
           lastPoint = point;
         }
       }
