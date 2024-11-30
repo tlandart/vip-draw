@@ -1,3 +1,13 @@
+export function getPersonalId() {
+  // https://stackoverflow.com/a/21125098
+  var match = document.cookie.match(new RegExp("(^| )personalId=([^;]+)"));
+  if (match) return match[2];
+  // return document.cookie.replace(
+  //   /(?:(?:^|.*;\s*)personalId\s*\=\s*([^;]*).*$)|^.*$/,
+  //   "$1"
+  // );
+}
+
 function handleResponse(res) {
   if (res.status != 200) {
     return res.text().then((text) => {
@@ -9,7 +19,7 @@ function handleResponse(res) {
 
 export function ping() {
   console.log("ping...");
-  fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/ping`)
+  fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/ping`, { method: "GET" })
     .then(handleResponse)
     .then(
       (res) => {

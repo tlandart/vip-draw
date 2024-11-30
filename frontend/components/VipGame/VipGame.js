@@ -16,7 +16,7 @@ import { deleteGame, checkGame } from "../../api/dbApi";
 
 /* The main multiplayer game. */
 
-export default function VipGame() {
+export default function VipGame({ username }) {
   const [stream, setStream] = useState(null); // the outgoing stream of our canvas
   const [canvasSaveFunc, setCanvasSaveFunc] = useState(null); // function to save canvas. set when the canvas is loaded, so this is defined in VipCanvas
   const videoElems = useRef(null); // video elements for all the streams
@@ -283,7 +283,9 @@ export default function VipGame() {
               {showCanvas && (
                 <>
                   <span className="block text-xl">Draw!</span>
-                  <span className="block text-xl">Word: {gameState.currentWord}</span>
+                  <span className="block text-xl">
+                    Word: {gameState.currentWord}
+                  </span>
                 </>
               )}
               {playerNum.current !== gameState.currentPlayer && (
@@ -303,7 +305,8 @@ export default function VipGame() {
                   minDist={1}
                 />
               </div>
-              {playerNum.current !== gameState.currentPlayer && videoElems.current[showVideoNum]}
+              {playerNum.current !== gameState.currentPlayer &&
+                videoElems.current[showVideoNum]}
               <VipMessages
                 messages={gameState.messages}
                 reactions={gameState.reactions}

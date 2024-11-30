@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
-import { ping } from "../api/dbApi";
+import { getPersonalId, ping } from "../api/dbApi";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -23,11 +23,20 @@ export default function Home() {
   const [followPersonalId, setFollowPersonalId] = useState("");
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
+    setPersonalId(getPersonalId());
+  }, []);
+
+  useEffect(() => {
+    // const user = localStorage.getItem("user");
+    // setPersonalId(getPersonalId());
+    // if (personalId !== "") {
+    //   setIsAuthenticated(true);
+    // }
+    if (personalId && personalId !== "") {
       setIsAuthenticated(true);
     }
-  }, []);
+    console.log("personal id:", personalId);
+  }, [personalId]);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -50,6 +59,7 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ email, password }),
+          credentials: "include",
         }
       );
 
@@ -57,7 +67,7 @@ export default function Home() {
         alert(
           isSignUp ? "Account created successfully!" : "Signed in successfully!"
         );
-        localStorage.setItem("user", email);
+        setPersonalId(getPersonalId());
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
@@ -85,14 +95,13 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ credential: response.credential }),
+          credentials: "include",
         }
       );
 
       if (res.ok) {
         alert("Google login successful!");
-        const data = await res.json();
-        const userEmail = data.user.email;
-        localStorage.setItem("user", userEmail);
+        setPersonalId(getPersonalId());
         setIsAuthenticated(true);
       } else {
         setError("Failed to login with Google");
@@ -115,12 +124,12 @@ export default function Home() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email: user }),
+      credentials: "include",
     })
       .then((response) => {
         if (response.ok) {
           alert("Logged out successfully");
-          localStorage.removeItem("user");
+          setPersonalId("");
           setIsAuthenticated(false);
           setShowProfile(false);
         } else {
@@ -133,18 +142,24 @@ export default function Home() {
       });
   };
 
-  const fetchUserProfile = async (userEmail) => {
+  const fetchUserProfile = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${userEmail}`
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${personalId}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        }
       );
       if (response.ok) {
         const profile = await response.json();
         setUsername(profile.username);
         setEmail(profile.email);
-        setPersonalId(profile.personalId);
         const countResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND}/api/get-follow-counts/${userEmail}`
+          `${process.env.NEXT_PUBLIC_BACKEND}/api/get-follow-counts/${personalId}`
         );
         if (countResponse.ok) {
           const { followers, following } = await countResponse.json();
@@ -158,11 +173,8 @@ export default function Home() {
   };
 
   const handleProfileClick = () => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      fetchUserProfile(user);
-      setShowProfile(true);
-    }
+    fetchUserProfile();
+    setShowProfile(true);
   };
 
   const handleUsernameChange = (e) => {
@@ -171,8 +183,6 @@ export default function Home() {
 
   const handleUsernameSubmit = async () => {
     try {
-      const userEmail = localStorage.getItem("user");
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND}/api/update-username`,
         {
@@ -181,9 +191,10 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: userEmail,
+            personalId: personalId,
             username: newUsername,
           }),
+          credentials: "include",
         }
       );
 
@@ -201,15 +212,14 @@ export default function Home() {
   };
 
   const handleFollowSubmit = async () => {
-    const userEmail = localStorage.getItem("user");
-    if (!userEmail) {
+    if (!personalId) {
       setError("User not authenticated");
       return;
     }
 
     try {
       console.log("Sending follow request:", {
-        email: userEmail,
+        personalId: personalId,
         personalId: followPersonalId,
       });
 
@@ -221,9 +231,10 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            email: userEmail,
+            personalId: personalId,
             personalId: followPersonalId,
           }),
+          credentials: "include",
         }
       );
 
@@ -435,7 +446,7 @@ export default function Home() {
           </div>
         )}
 
-        <VipGame />
+        <VipGame username={username} />
       </div>
     </GoogleOAuthProvider>
   );
