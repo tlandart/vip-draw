@@ -10,7 +10,7 @@ export default function Home() {
   const [username, setUsername] = useState("");
   const [newUsername, setNewUsername] = useState(username);
   const [password, setPassword] = useState("");
-  const [followers, setFollowers] = useState(0); 
+  const [followers, setFollowers] = useState(0);
   const [following, setFollowing] = useState(0);
   const [personalId, setPersonalId] = useState("");
   const [error, setError] = useState("");
@@ -42,13 +42,16 @@ export default function Home() {
 
     try {
       const endpoint = isSignUp ? "signup" : "signin";
-      const response = await fetch(`http://localhost:4000/api/${endpoint}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       if (response.ok) {
         alert(
@@ -74,13 +77,16 @@ export default function Home() {
 
   const handleGoogleLoginSuccess = async (response) => {
     try {
-      const res = await fetch("http://localhost:4000/api/google-login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ credential: response.credential }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/google-login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ credential: response.credential }),
+        }
+      );
 
       if (res.ok) {
         alert("Google login successful!");
@@ -104,7 +110,7 @@ export default function Home() {
 
   const handleLogout = () => {
     const user = localStorage.getItem("user");
-    fetch("http://localhost:4000/api/logout", {
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/logout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,14 +136,16 @@ export default function Home() {
   const fetchUserProfile = async (userEmail) => {
     try {
       const response = await fetch(
-        `http://localhost:4000/api/get-profile/${userEmail}`
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${userEmail}`
       );
       if (response.ok) {
         const profile = await response.json();
         setUsername(profile.username);
         setEmail(profile.email);
         setPersonalId(profile.personalId);
-        const countResponse = await fetch(`http://localhost:4000/api/get-follow-counts/${userEmail}`);
+        const countResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND}/api/get-follow-counts/${userEmail}`
+        );
         if (countResponse.ok) {
           const { followers, following } = await countResponse.json();
           setFollowers(followers);
@@ -166,7 +174,7 @@ export default function Home() {
       const userEmail = localStorage.getItem("user");
 
       const response = await fetch(
-        `http://localhost:4000/api/update-username`,
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/update-username`,
         {
           method: "POST",
           headers: {
@@ -191,28 +199,34 @@ export default function Home() {
       alert("Error updating username.");
     }
   };
-  
+
   const handleFollowSubmit = async () => {
     const userEmail = localStorage.getItem("user");
     if (!userEmail) {
       setError("User not authenticated");
       return;
     }
-  
+
     try {
-      console.log('Sending follow request:', { email: userEmail, personalId: followPersonalId });
-  
-      const response = await fetch(`http://localhost:4000/api/follow`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: userEmail,
-          personalId: followPersonalId,
-        }),
+      console.log("Sending follow request:", {
+        email: userEmail,
+        personalId: followPersonalId,
       });
-  
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/follow`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: userEmail,
+            personalId: followPersonalId,
+          }),
+        }
+      );
+
       if (response.ok) {
         const data = await response.json();
         setFollowing((prev) => prev + 1);
@@ -231,9 +245,6 @@ export default function Home() {
       setError("Error following user");
     }
   };
-  
-
-  
 
   const handleFollowPanelClose = () => {
     setShowFollowPanel(false);
@@ -296,9 +307,15 @@ export default function Home() {
               </div>
               <div className="mb-4">
                 <div className="flex justify-between items-center">
-                  <label className="block text-sm">Followers: {followers}</label>
-                  <label className="block text-sm">Following: {following}</label>
-                  <label className="block text-sm">Personal ID: {personalId}</label>
+                  <label className="block text-sm">
+                    Followers: {followers}
+                  </label>
+                  <label className="block text-sm">
+                    Following: {following}
+                  </label>
+                  <label className="block text-sm">
+                    Personal ID: {personalId}
+                  </label>
                 </div>
               </div>
 
@@ -332,9 +349,7 @@ export default function Home() {
                 X
               </button>
               <h2 className="text-xl font-bold mb-4">Follow Someone</h2>
-              {error && (
-                <p className="text-red-500 text-sm mb-4">{error}</p>
-              )}
+              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
               <div className="mb-4">
                 <label className="block text-sm">Enter Personal ID:</label>
                 <input
