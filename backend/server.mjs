@@ -39,6 +39,7 @@ app.use(
       httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
+      maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
     },
   })
 );
@@ -226,9 +227,9 @@ app.post("/api/signup", async (req, res) => {
     res.setHeader(
       "Set-Cookie",
       serialize("session_id", sessionId, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        credentials: true,
+        // path: "/",
+        // maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        // credentials: true,
       })
     );
     res.status(200).json(user);
@@ -264,8 +265,9 @@ app.post("/api/signin", async (req, res) => {
     res.setHeader(
       "Set-Cookie",
       serialize("session_id", existingUser.sessionId, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        // path: "/",
+        // maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        // credentials: true,
       })
     );
     res.status(200).json(existingUser);
@@ -323,8 +325,9 @@ app.post("/api/google-login", async (req, res) => {
     res.setHeader(
       "Set-Cookie",
       serialize("session_id", user.sessionId, {
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        // path: "/",
+        // maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        // credentials: true,
       })
     );
     res.status(200).json(user);
