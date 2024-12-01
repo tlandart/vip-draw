@@ -3,7 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
-import { getSessionId, ping } from "../api/dbApi";
+import {
+  accountGoogleSignin,
+  accountLogout,
+  accountSignupOrSignin,
+  accountFetchProfile,
+  accountUsernameSubmit,
+  getSessionId,
+  ping,
+  accountFollow,
+} from "../api/dbApi";
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
@@ -32,34 +41,21 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const endpoint = isSignUp ? "signup" : "signin";
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/${endpoint}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: inputEmailRef.current.value.trim(),
-            password: inputPasswordRef.current.value.trim(),
-          }),
-          credentials: "include",
-        }
+      const action = isSignUp ? "signup" : "signin";
+      const profile = await accountSignupOrSignin(
+        action,
+        inputEmailRef.current.value.trim(),
+        inputPasswordRef.current.value.trim()
       );
+      console.log("got profile", profile);
 
-      if (response.ok) {
-        alert(
-          isSignUp ? "Account created successfully!" : "Signed in successfully!"
-        );
-        const profile = await response.json();
+      if (!profile.err) {
         setProfile(profile);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
-        const data = await response.json();
         setError(
-          data.message ||
+          profile.err ||
             (isSignUp ? "Failed to create account" : "Failed to sign in")
         );
       }
@@ -72,29 +68,10 @@ export default function Home() {
   };
 
   const handleGoogleLoginSuccess = async (response) => {
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/google-login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ credential: response.credential }),
-          credentials: "include",
-        }
-      );
-
-      if (res.ok) {
-        alert("Google login successful!");
-        setIsAuthenticated(true);
-      } else {
-        setError("Failed to login with Google");
-      }
-    } catch (error) {
-      console.error("Error during Google login:", error);
-      setError("Failed to login with Google");
-    }
+    const profile = await accountGoogleSignin(response.credential);
+    console.log("got profile", profile);
+    setProfile(profile);
+    setIsAuthenticated(true);
   };
 
   const handleGoogleLoginFailure = (error) => {
@@ -102,49 +79,24 @@ export default function Home() {
     setError("Google login failed");
   };
 
-  const handleLogout = () => {
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/logout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-    })
-      .then((response) => {
-        if (response.ok) {
-          alert("Logged out successfully");
-          setProfile(null);
-          setIsAuthenticated(false);
-          setShowProfile(false);
-        } else {
-          setError("Failed to log out");
-        }
-      })
-      .catch((error) => {
-        console.error("Error during logout:", error);
-        setError("Failed to log out");
-      });
+  const handleLogout = async () => {
+    let response = await accountLogout();
+    if (!response.err) {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
+    } else {
+      setError("Failed to log out");
+    }
   };
 
   const fetchUserProfile = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${getSessionId()}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-        }
-      );
-      if (response.ok) {
-        const profile = await response.json();
-        setProfile(profile);
-        setIsAuthenticated(true);
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+    let profile = await accountFetchProfile();
+    if (!profile.err) {
+      setProfile(profile);
+      setIsAuthenticated(true);
+    } else {
+      setError("Error fetching user profile.");
     }
   };
 
@@ -154,65 +106,25 @@ export default function Home() {
   };
 
   const handleUsernameSubmit = async () => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/update-username`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sessionId: getSessionId(),
-            username: inputNewUsernameRef.current.value.trim(),
-          }),
-          credentials: "include",
-        }
-      );
-
-      if (response.ok) {
-        const profile = await response.json();
-        setProfile(profile);
-        alert("Username updated successfully!");
-      } else {
-        const data = await response.json();
-        alert(data.message || "Failed to update username.");
-      }
-    } catch (error) {
-      console.error("Error updating username:", error);
-      alert("Error updating username.");
+    let profile = await accountUsernameSubmit(
+      inputNewUsernameRef.current.value.trim()
+    );
+    if (!profile.err) {
+      setProfile(profile);
+    } else {
+      setError("Failed to update username.");
     }
   };
 
   const handleFollowSubmit = async () => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/follow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            sessionId: getSessionId(),
-            theirPersonalId: followPersonalId,
-          }),
-          credentials: "include",
-        }
-      );
+      const profile = await accountFollow(followPersonalId);
 
-      if (response.ok) {
-        const profile = await response.json();
+      if (!profile.err) {
         setProfile(profile);
-        alert("Followed successfully!");
         setShowFollowPanel(false);
       } else {
-        const data = await response.json();
-        if (data.message === "You are already following this user.") {
-          setError("You are already following this user.");
-        } else {
-          setError(data.message || "Failed to follow");
-        }
+        setError(profile.err || "Failed to follow");
       }
     } catch (error) {
       console.error("Error following user:", error);
@@ -251,7 +163,7 @@ export default function Home() {
 
         {showProfile && (
           <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
-            <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
+            <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
               <button
                 onClick={() => setShowProfile(false)}
                 className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
@@ -281,25 +193,27 @@ export default function Home() {
                 </div>
               </div>
               <div className="mb-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-start gap-3">
                   <label className="block text-sm">
                     Followers: {profile.followers}
                   </label>
                   <label className="block text-sm">
                     Following: {profile.following}
                   </label>
-                  <label className="block text-sm">
-                    Personal ID: {profile.personalId}
-                  </label>
                 </div>
               </div>
 
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white p-2 rounded mt-4 mx-auto"
-              >
-                Log Out
-              </button>
+              <div className="flex flex-row gap-3 absolute bottom-5">
+                <button
+                  onClick={handleLogout}
+                  className="absolute bg-red-500 text-white p-2 rounded mt-4 mx-auto"
+                >
+                  Log Out
+                </button>
+                <label className="block text-sm">
+                  Personal ID: {profile.personalId}
+                </label>
+              </div>
             </div>
           </div>
         )}

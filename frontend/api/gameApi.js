@@ -1,5 +1,5 @@
 import { Peer } from "peerjs";
-import { createHost } from "./dbApi";
+import { accountCreateGame } from "./dbApi";
 
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
@@ -118,8 +118,12 @@ export function peerHost(
 
     try {
       // Store the host ID in the database
-      const response = await createHost(id);
-      console.log("Host created successfully:", response.message);
+      const response = await accountCreateGame(id);
+      if (response.err) {
+        console.error("Failed to store Host ID:", response.err);
+      } else {
+        console.log("Host created successfully:", response);
+      }
     } catch (error) {
       console.error("Failed to store Host ID:", error);
     }

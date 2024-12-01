@@ -8,4 +8,4 @@ uploads
 db
 *-lock.json
 
-.env.local
+.env
