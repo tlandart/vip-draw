@@ -138,7 +138,6 @@ export default function Home() {
 
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
-      <button onClick={() => ping()}>ping</button>
       <div className="relative h-screen w-full">
         <div className="absolute top-20 right-2">
           {isAuthenticated ? (
@@ -322,7 +321,7 @@ export default function Home() {
           </div>
         )}
 
-        <VipGame />
+        {isAuthenticated && <VipGame />}
       </div>
     </GoogleOAuthProvider>
   );

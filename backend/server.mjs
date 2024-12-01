@@ -7,6 +7,7 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { createServer } from "http";
 import { parse, serialize } from "cookie";
+import { ExpressPeerServer } from "peer";
 
 const app = express();
 const PORT = 4000;
@@ -30,7 +31,6 @@ app.use((req, res, next) => {
 
 app.use(
   session({
-    // secret: process.env.SECRET_KEY,
     secret: process.env.SECRET_KEY,
     resave: false,
     saveUninitialized: true,
@@ -41,12 +41,6 @@ app.use(
     },
   })
 );
-
-const isAuthenticated = function (req, res, next) {
-  console.log("req.session.session_id is", req.session.session_id);
-  if (!req.session.session_id) return res.status(401).end("access denied");
-  next();
-};
 
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST}:6379`,
@@ -67,6 +61,12 @@ redisClient.connect().catch((err) => {
 app.get("/api/ping", (req, res) => {
   res.json("pong");
 });
+
+const isAuthenticated = function (req, res, next) {
+  console.log("req.session.session_id is", req.session.session_id);
+  if (!req.session.session_id) return res.status(401).end("access denied");
+  next();
+};
 
 app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
   const { hostId } = req.params;
@@ -103,9 +103,8 @@ app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
 app.post("/create-game", isAuthenticated, async (req, res) => {
   const { sessionId, hostId } = req.body;
 
-  if (!hostId) {
-    return res.status(400).json("Host ID is required.");
-  }
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
 
   // ensure it is really the user
   if (sessionId !== req.session.session_id)
@@ -127,9 +126,8 @@ app.delete("/delete-game/:hostId", isAuthenticated, async (req, res) => {
   const { hostId } = req.params;
   const { sessionId } = req.body;
 
-  if (!hostId) {
-    return res.status(400).json("Host ID is required.");
-  }
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
 
   // ensure it is really the user
   if (sessionId !== req.session.session_id)
@@ -161,6 +159,32 @@ app.delete("/delete-game/:hostId", isAuthenticated, async (req, res) => {
   } catch (err) {
     console.error("Error deleting Host ID:", err);
     res.status(500).json("Failed to delete Host ID.");
+  }
+});
+
+app.get("/game-usernames", isAuthenticated, async (req, res) => {
+  const { sessionId, hostId } = req.query;
+
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
+
+  // ensure it is really the user
+  if (sessionId !== req.session.session_id)
+    return res.status(403).end("forbidden");
+
+  try {
+    const personalIds = await redisClient.lRange(`game:${hostId}`, 0, -1);
+    let usernames = [];
+
+    // get usernames from each personalId
+    for (const id of personalIds) {
+      usernames.push(await redisClient.hGet(`user:${id}`, "username"));
+    }
+
+    res.status(200).json(usernames);
+  } catch (err) {
+    console.error("Error getting usernames from Host ID:", err);
+    res.status(500).json("Failed to get usernames from Host ID.");
   }
 });
 

@@ -207,7 +207,11 @@ export default function VipGame() {
   return (
     <>
       {/* <span>{gameStateToString()}</span> */}
-      <span ref={idLabelRef}></span>
+
+      <span
+        className="text-3xl flex w-fit ml-auto mr-auto mt-5"
+        ref={idLabelRef}
+      ></span>
 
       {gameState.start === 0 && (
         <div className="button-container">

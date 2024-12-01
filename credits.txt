@@ -11,3 +11,4 @@ todo: replace this with a full credits page
 - https://stackoverflow.com/questions/50929159/first-frame-from-capturestream-not-sending
 - https://stackoverflow.com/a/40887181
 - https://stackoverflow.com/a/21125098
+- https://www.geeksforgeeks.org/generate-random-characters-numbers-in-javascript/

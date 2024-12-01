@@ -129,3 +129,17 @@ export async function accountDeleteGame(hostId) {
     credentials: "include",
   }).then(handleResponse);
 }
+
+export async function accountGameGetUsernames(hostId) {
+  return fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND}/game-usernames?${new URLSearchParams({
+      hostId: hostId,
+      sessionId: getSessionId(),
+    })}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    }
+  ).then(handleResponse);
+}
