@@ -7,7 +7,6 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 import { createServer } from "http";
 import { parse, serialize } from "cookie";
-import { ExpressPeerServer } from "peer";
 
 const app = express();
 const PORT = 4000;
@@ -32,12 +31,12 @@ app.use((req, res, next) => {
 app.use(
   session({
     secret: process.env.SECRET_KEY,
-    resave: false,
+    resave: true,
     saveUninitialized: true,
     cookie: {
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "lax",
+      sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
     },
   })
 );
