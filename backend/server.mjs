@@ -38,7 +38,6 @@ app.use(
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
-      credentials: true,
     },
   })
 );
