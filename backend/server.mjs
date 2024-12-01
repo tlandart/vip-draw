@@ -5,7 +5,9 @@ import { OAuth2Client } from "google-auth-library";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-import { createServer } from "http";
+import * as https from "https";
+import * as http from "http";
+// import { createServer } from "http";
 import { parse, serialize } from "cookie";
 
 const app = express();
@@ -36,7 +38,7 @@ app.use(
     cookie: {
       // httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "lax",
+      sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
     },
   })
 );
@@ -406,30 +408,37 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
   }
 
   try {
-    const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
+    let follower = await redisClient.hGetAll(`user:${myPersonalId}`);
+    const following = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
-    if (Object.keys(userProfile).length === 0) {
-      return res.status(404).json("User not found.");
+    if (
+      Object.keys(follower).length === 0 ||
+      Object.keys(following).length === 0
+    ) {
+      return res.status(404).json("One or both users not found.");
     }
 
-    const personalIds = await redisClient.lRange(
-      `following:${myPersonalId}`,
-      0,
-      -1
+    const followKey = `following:${myPersonalId}`;
+    const alreadyFollowing = await redisClient.sIsMember(
+      followKey,
+      theirPersonalId
     );
 
-    for (const id of personalIds) {
-      if (id == theirPersonalId) {
-        return res.status(400).json("You are already following this user.");
-      }
+    if (alreadyFollowing) {
+      return res.status(400).json("You are already following this user.");
     }
 
-    await redisClient.rPush(`followers:${theirPersonalId}`, myPersonalId);
-    await redisClient.rPush(`following:${myPersonalId}`, theirPersonalId);
-    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1);
-    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
+    await redisClient
+      .multi()
+      .sAdd(followKey, theirPersonalId)
+      .sAdd(`followers:${theirPersonalId}`, myPersonalId)
+      .hIncrBy(`user:${myPersonalId}`, "following", 1)
+      .hIncrBy(`user:${theirPersonalId}`, "followers", 1)
+      .exec();
 
-    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
+    follower.following++;
+
+    res.status(200).json(follower);
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json("Failed to follow user.");
@@ -495,7 +504,14 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //   console.log(`Server running on http://localhost:${PORT}`);
 // });
 
-createServer(app).listen(PORT, function (err) {
-  if (err) console.log(err);
-  else console.log(`HTTP server on http://localhost:${PORT}`);
-});
+if (process.env.COOKIE_SECURE === "true") {
+  https.createServer(app).listen(PORT, function (err) {
+    if (err) console.log(err);
+    else console.log(`HTTP server on http://localhost:${PORT}`);
+  });
+} else {
+  http.createServer(app).listen(PORT, function (err) {
+    if (err) console.log(err);
+    else console.log(`HTTP server on http://localhost:${PORT}`);
+  });
+}
