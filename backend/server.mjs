@@ -31,14 +31,14 @@ app.use((req, res, next) => {
 
 app.use(
   session({
-    proxy: process.env.COOKIE_SECURE === "true",
     secret: process.env.SECRET_KEY,
     resave: false,
     saveUninitialized: true,
     cookie: {
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "none",
+      sameSite: "lax",
+      credentials: true,
     },
   })
 );
