@@ -1,6 +1,6 @@
-export function getPersonalId() {
+export function getSessionId() {
   // https://stackoverflow.com/a/21125098
-  var match = document.cookie.match(new RegExp("(^| )personalId=([^;]+)"));
+  var match = document.cookie.match(new RegExp("(^| )session_id=([^;]+)"));
   if (match) return match[2];
   // return document.cookie.replace(
   //   /(?:(?:^|.*;\s*)personalId\s*\=\s*([^;]*).*$)|^.*$/,

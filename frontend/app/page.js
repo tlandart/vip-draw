@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
-import { getPersonalId, ping } from "../api/dbApi";
+import { getSessionId, ping } from "../api/dbApi";
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -23,19 +23,24 @@ export default function Home() {
   const [followPersonalId, setFollowPersonalId] = useState("");
 
   useEffect(() => {
-    setPersonalId(getPersonalId());
+    // setPersonalId(getPersonalIdFromSession());
+    const sessionId = getSessionId();
+    console.log("sessionId:", sessionId);
+    if (sessionId) {
+      fetchUserProfile();
+    }
   }, []);
 
   useEffect(() => {
     // const user = localStorage.getItem("user");
-    // setPersonalId(getPersonalId());
+    // setPersonalId(getPersonalIdFromSession());
     // if (personalId !== "") {
     //   setIsAuthenticated(true);
     // }
-    if (personalId && personalId !== "") {
-      setIsAuthenticated(true);
-    }
-    console.log("personal id:", personalId);
+    // if (personalId && personalId !== "") {
+    //   setIsAuthenticated(true);
+    // }
+    // console.log("personal id:", personalId);
   }, [personalId]);
 
   const handleFormSubmit = async (e) => {
@@ -67,7 +72,6 @@ export default function Home() {
         alert(
           isSignUp ? "Account created successfully!" : "Signed in successfully!"
         );
-        setPersonalId(getPersonalId());
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
@@ -101,7 +105,6 @@ export default function Home() {
 
       if (res.ok) {
         alert("Google login successful!");
-        setPersonalId(getPersonalId());
         setIsAuthenticated(true);
       } else {
         setError("Failed to login with Google");
@@ -118,7 +121,6 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    const user = localStorage.getItem("user");
     fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/logout`, {
       method: "POST",
       headers: {
@@ -129,6 +131,10 @@ export default function Home() {
       .then((response) => {
         if (response.ok) {
           alert("Logged out successfully");
+          setUsername("");
+          setEmail("");
+          setFollowers(0);
+          setFollowing(0);
           setPersonalId("");
           setIsAuthenticated(false);
           setShowProfile(false);
@@ -145,7 +151,7 @@ export default function Home() {
   const fetchUserProfile = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${personalId}`,
+        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${getSessionId()}`,
         {
           method: "GET",
           headers: {
@@ -158,14 +164,20 @@ export default function Home() {
         const profile = await response.json();
         setUsername(profile.username);
         setEmail(profile.email);
-        const countResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND}/api/get-follow-counts/${personalId}`
-        );
-        if (countResponse.ok) {
-          const { followers, following } = await countResponse.json();
-          setFollowers(followers);
-          setFollowing(following);
-        }
+        setFollowers(profile.followers);
+        setFollowing(profile.following);
+        setPersonalId(profile.personalId);
+        // const countResponse = await fetch(
+        //   `${
+        //     process.env.NEXT_PUBLIC_BACKEND
+        //   }/api/get-follow-counts/${getSessionId()}`
+        // );
+        // if (countResponse.ok) {
+        //   const { followers, following } = await countResponse.json();
+        //   setFollowers(followers);
+        //   setFollowing(following);
+        // }
+        setIsAuthenticated(true);
       }
     } catch (error) {
       console.error("Error fetching user profile:", error);
@@ -191,7 +203,7 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            personalId: personalId,
+            sessionId: getSessionId(),
             username: newUsername,
           }),
           credentials: "include",
@@ -219,8 +231,8 @@ export default function Home() {
 
     try {
       console.log("Sending follow request:", {
-        personalId: personalId,
-        personalId: followPersonalId,
+        myPersonalId: personalId,
+        theirPersonalId: followPersonalId,
       });
 
       const response = await fetch(
@@ -231,8 +243,8 @@ export default function Home() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            personalId: personalId,
-            personalId: followPersonalId,
+            sessionId: getSessionId(),
+            theirPersonalId: followPersonalId,
           }),
           credentials: "include",
         }

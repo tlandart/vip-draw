@@ -32,34 +32,19 @@ app.use((req, res, next) => {
 app.use(
   session({
     secret: "vip",
-    resave: true,
+    resave: false,
     saveUninitialized: true,
-    // cookie: { secure: false },
+    cookie: {
+      httpOnly: true,
+      secure: false, // TODO update this with .env flag
+      sameSite: "lax",
+    },
   })
 );
 
-// app.use(function (req, res, next) {
-//   let cookies = parse(req.headers.cookie || "");
-//   req.personalId = cookies.personalId ? cookies.personalId : null;
-//   next();
-// });
-
-// app.use(function (req, res, next) {
-//   const personalId = req.session.personalId ? req.session.personalId : "";
-//   res.setHeader(
-//     "Set-Cookie",
-//     serialize("personalId", personalId, {
-//       path: "/",
-//       maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-//       credentials: true,
-//     })
-//   );
-//   next();
-// });
-
 const isAuthenticated = function (req, res, next) {
-  console.log("req.session.personalId is", req.session.personalId);
-  if (!req.session.personalId) return res.status(401).end("access denied");
+  console.log("req.session.session_id is", req.session.session_id);
+  if (!req.session.session_id) return res.status(401).end("access denied");
   next();
 };
 
@@ -152,37 +137,33 @@ app.post("/api/signup", async (req, res) => {
   }
 
   try {
-    const existingUser = await redisClient.hGetAll(`user:${email}`);
-    if (Object.keys(existingUser).length !== 0) {
+    const existingUser = await redisClient.get(`email:${email}`);
+    if (existingUser) {
       return res.status(400).json({ message: "Email already in use." });
     }
 
     const personalId = uuidv4();
+    const sessionId = uuidv4();
     const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    await redisClient.hSet(`user:${email}`, {
-      email,
+    await redisClient.hSet(`user:${personalId}`, {
       personalId,
+      sessionId: sessionId,
+      email: email,
       hash: hashedPassword,
       username: defaultUsername,
       followers: 0,
       following: 0,
     });
-    await redisClient.hSet(
-      `personalId:${personalId}`,
-      "email",
-      email,
-      `hash:${hashedPassword}`
-    );
-
+    await redisClient.set(`email:${email}`, personalId);
+    await redisClient.set(`sessionId:${sessionId}`, personalId);
     // start a session
-    req.session.personalId = personalId;
-    console.log("signing up", req.session.personalId);
+    req.session.session_id = sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("personalId", personalId, {
+      serialize("session_id", sessionId, {
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         credentials: true,
@@ -205,9 +186,10 @@ app.post("/api/signin", async (req, res) => {
   }
 
   try {
-    const existingUser = await redisClient.hGetAll(`user:${email}`);
+    const personalId = await redisClient.get(`email:${email}`);
+    const existingUser = await redisClient.hGetAll(`user:${personalId}`);
 
-    if (Object.keys(existingUser).length === 0) {
+    if (!existingUser || Object.keys(existingUser).length === 0) {
       return res.status(400).json({ message: "User not found." });
     }
 
@@ -218,10 +200,10 @@ app.post("/api/signin", async (req, res) => {
     }
 
     // start a session
-    req.session.personalId = existingUser.personalId;
+    req.session.session_id = existingUser.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("personalId", existingUser.personalId, {
+      serialize("session_id", existingUser.sessionId, {
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
       })
@@ -248,57 +230,64 @@ app.post("/api/google-login", async (req, res) => {
 
     const payload = ticket.getPayload();
     const { sub, email, name } = payload;
-    let user = await redisClient.hGetAll(`user:${email}`);
+    let user = await redisClient.hGetAll(`user:${sub}`);
 
     if (Object.keys(user).length === 0) {
       const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
       const personalId = sub;
+      const sessionId = uuidv4();
       const followers = 0;
       const following = 0;
 
-      await redisClient.hSet(`user:${email}`, {
-        email,
-        username: defaultUsername,
+      await redisClient.hSet(`user:${personalId}`, {
         personalId,
+        sessionId: sessionId,
+        email: email,
+        username: defaultUsername,
         followers: followers.toString(),
         following: following.toString(),
       });
-      await redisClient.hSet(`personalId:${personalId}`, "email", email);
-
-      user = {
-        email,
-        username: defaultUsername,
-        personalId,
-        followers,
-        following,
-      };
+      await redisClient.set(`email:${email}`, personalId);
+      await redisClient.set(`sessionId:${sessionId}`, personalId);
       console.log(
         `New user created for ${email} with username ${defaultUsername}.`
       );
     } else {
-      console.log(`User ${email} already exists.`);
+      console.log(`User ${email} exists, signing in.`);
       user.followers = user.followers || 0;
       user.following = user.following || 0;
     }
 
     // start a session
-    req.session.personalId = user.personalId;
+    req.session.session_id = sub;
     res.setHeader(
       "Set-Cookie",
-      serialize("personalId", user.personalId, {
+      serialize("personalId", sub, {
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
       })
     );
-    res.status(201).json(user.personalId);
+    res.status(201).json(sub);
   } catch (err) {
     console.error("Error verifying Google ID token:", err);
     res.status(500).send({ message: "Failed to authenticate user." });
   }
 });
 
-app.get("/api/get-profile/:personalId", async (req, res) => {
-  const { personalId } = req.params;
+app.post("/api/logout", isAuthenticated, (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Failed to log out" });
+    }
+    res.clearCookie("session_id");
+    res.status(200).json({ message: "Logged out successfully" });
+  });
+});
+
+app.get("/api/get-profile/:sessionId", async (req, res) => {
+  const { sessionId } = req.params;
+
+  const personalId = await redisClient.get(`sessionId:${sessionId}`);
 
   try {
     const userProfile = await redisClient.hGetAll(`user:${personalId}`);
@@ -314,37 +303,57 @@ app.get("/api/get-profile/:personalId", async (req, res) => {
   }
 });
 
-app.get("/api/get-follow-counts/:personalId", async (req, res) => {
-  const { personalId } = req.params;
+// app.get("/api/get-profile/:personalId", async (req, res) => {
+//   const { personalId } = req.params;
 
-  try {
-    const user = await redisClient.hGetAll(`user:${personalId}`);
+//   try {
+//     const userProfile = await redisClient.hGetAll(`user:${personalId}`);
 
-    if (Object.keys(user).length === 0) {
-      return res.status(404).json({ message: "User not found." });
-    }
+//     if (Object.keys(userProfile).length === 0) {
+//       return res.status(404).json({ message: "User not found." });
+//     }
 
-    const followers = user.followers || 0;
-    const following = user.following || 0;
+//     res.status(200).json(userProfile);
+//   } catch (error) {
+//     console.error("Error fetching user profile:", error);
+//     res.status(500).json({ message: "Failed to fetch user profile" });
+//   }
+// });
 
-    res.status(200).json({ followers, following });
-  } catch (error) {
-    console.error("Error fetching user follow counts:", error);
-    res.status(500).json({ message: "Failed to fetch follow counts" });
-  }
-});
+// app.get("/api/get-follow-counts/:personalId", async (req, res) => {
+//   const { personalId } = req.params;
+
+//   try {
+//     const user = await redisClient.hGetAll(`user:${personalId}`);
+
+//     if (Object.keys(user).length === 0) {
+//       return res.status(404).json({ message: "User not found." });
+//     }
+
+//     const followers = user.followers || 0;
+//     const following = user.following || 0;
+
+//     res.status(200).json({ followers, following });
+//   } catch (error) {
+//     console.error("Error fetching user follow counts:", error);
+//     res.status(500).json({ message: "Failed to fetch follow counts" });
+//   }
+// });
 
 app.post("/api/update-username", isAuthenticated, async (req, res) => {
-  const { personalId, username } = req.body;
+  const { sessionId, username } = req.body;
 
-  if (!personalId || !username) {
+  if (!sessionId || !username) {
     return res
       .status(400)
       .json({ message: "personalId and username are required." });
   }
 
-  if (personalId !== req.session.personalId)
+  // ensure it is really the user
+  if (sessionId !== req.session.session_id)
     return res.status(403).end("forbidden");
+
+  const personalId = await redisClient.get(`sessionId:${sessionId}`);
 
   try {
     const user = await redisClient.hGetAll(`user:${personalId}`);
@@ -361,28 +370,20 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
   }
 });
 
-app.post("/api/logout", isAuthenticated, (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ message: "Failed to log out" });
-    }
-    res.status(200).json({ message: "Logged out successfully" });
-  });
-});
-
 app.post("/api/follow", isAuthenticated, async (req, res) => {
-  const { myPersonalId, theirPersonalId } = req.body;
+  const { sessionId, theirPersonalId } = req.body;
 
-  console.log("Received follow request:", req.body);
+  // ensure it is really the user
+  if (sessionId !== req.session.session_id)
+    return res.status(403).end("forbidden");
+
+  const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
 
   if (!myPersonalId || !theirPersonalId) {
     return res.status(400).json({
       message: "Both your personalId and their personalId are required.",
     });
   }
-
-  if (myPersonalId !== req.session.personalId)
-    return res.status(403).end("forbidden");
 
   try {
     const follower = await redisClient.hGetAll(`user:${myPersonalId}`);
@@ -425,15 +426,19 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
 });
 
 app.post("/api/unfollow", isAuthenticated, async (req, res) => {
-  const { myPersonalId, theirPersonalId } = req.body;
+  const { sessionId, theirPersonalId } = req.body;
 
-  console.log("Received unfollow request:", req.body);
-
-  if (!myPersonalId || !theirPersonalId) {
+  if (!sessionId || !theirPersonalId) {
     return res.status(400).json({
-      message: "Both your personalId and their personalId are required.",
+      message: "Both your sessionId and their personalId are required.",
     });
   }
+
+  // ensure it is really the user
+  if (sessionId !== req.session.session_id)
+    return res.status(403).end("forbidden");
+
+  const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
 
   if (myPersonalId !== req.session.personalId)
     return res.status(403).end("forbidden");
