@@ -412,8 +412,12 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
       return res.status(404).json("User not found.");
     }
 
-    const personalIds = await redisClient.lRange(`following:${myPersonalId}`, 0, -1);
-  
+    const personalIds = await redisClient.lRange(
+      `following:${myPersonalId}`,
+      0,
+      -1
+    );
+
     for (const id of personalIds) {
       if (id == theirPersonalId) {
         return res.status(400).json("You are already following this user.");
@@ -422,8 +426,8 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
 
     await redisClient.rPush(`followers:${theirPersonalId}`, myPersonalId);
     await redisClient.rPush(`following:${myPersonalId}`, theirPersonalId);
-    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1)
-    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1)
+    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1);
+    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
 
     res.status(200).json(`Successfully followed ${theirPersonalId}.`);
   } catch (error) {

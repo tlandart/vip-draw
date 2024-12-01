@@ -16,7 +16,7 @@ services:
       - frontend
       - backend
 
-  reverse proxy let's encrypt companion
+  # reverse proxy let's encrypt companion
   nginx-proxy-acme:
     image: nginxproxy/acme-companion
     container_name: nginx-proxy-acme

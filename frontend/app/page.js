@@ -93,7 +93,7 @@ export default function Home() {
 
   const closeProfile = () => {
     setShowProfile(false);
-  }
+  };
 
   const fetchUserProfile = async () => {
     let profile = await accountFetchProfile();
@@ -155,9 +155,16 @@ export default function Home() {
         </div>
 
         {showProfile && (
-          <VipProfile profile={profile} setProfile={setProfile} isMine={true} onLogout={handleLogout} onClose={closeProfile} onError={(e) => setError(e)} />
+          <VipProfile
+            profile={profile}
+            setProfile={setProfile}
+            isMine={true}
+            onLogout={handleLogout}
+            onClose={closeProfile}
+            onError={(e) => setError(e)}
+          />
         )}
-        
+
         <div className="absolute bottom-20 right-2">
           {isAuthenticated && (
             <button

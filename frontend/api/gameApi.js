@@ -1,5 +1,7 @@
 import { Peer } from "peerjs";
 import { accountCreateGame, accountGameGetUsernames } from "./dbApi";
+import fs from "fs";
+import path from "path";
 
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
@@ -16,59 +18,18 @@ let canvStream; // our outgoing canvas stream
 */
 
 // TODO read this from https://github.com/googlecreativelab/quickdraw-dataset/blob/master/categories.txt
-let words = [
-  "airplane",
-  "ambulance",
-  "angel",
-  "ant",
-  "baseball",
-  "belt",
-  "bench",
-  "bicycle",
-  "binoculars",
-  "bottlecap",
-  "bus",
-  "camera",
-  "camouflage",
-  "campfire",
-  "candle",
-  "cannon",
-  "canoe",
-  "car",
-  "computer",
-  "cookie",
-  "cooler",
-  "dragon",
-  "dresser",
-  "drill",
-  "drums",
-  "duck",
-  "fork",
-  "helmet",
-  "hexagon",
-  "laptop",
-  "leaf",
-  "rabbit",
-  "raccoon",
-  "radio",
-  "rain",
-  "rainbow",
-  "rake",
-  "rhinoceros",
-  "spoon",
-  "spreadsheet",
-  "sword",
-  "syringe",
-  "table",
-  "toothpaste",
-  "tornado",
-  "tractor",
-  "train",
-  "violin",
-  "watermelon",
-  "zebra",
-  "zigzag",
-];
+const wordsFilePath = path.join(__dirname, "words.txt");
+let words = [];
+try {
+  const data = fs.readFileSync(wordsFilePath, "utf-8");
+  words = data
+    .split("\n")
+    .map((word) => word.trim())
+    .filter((word) => word.length > 0);
+} catch (err) {
+  console.error("Error reading words file:", err);
+}
+export { words };
 
 function randomWord() {
   return words[Math.floor(Math.random() * words.length)];
