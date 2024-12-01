@@ -1,18 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
 import { getSessionId, ping } from "../api/dbApi";
 
 export default function Home() {
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [newUsername, setNewUsername] = useState(username);
-  const [password, setPassword] = useState("");
-  const [followers, setFollowers] = useState(0);
-  const [following, setFollowing] = useState(0);
-  const [personalId, setPersonalId] = useState("");
+  const [profile, setProfile] = useState(null);
+  const inputEmailRef = useRef();
+  const inputPasswordRef = useRef();
+  const inputNewUsernameRef = useRef();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -23,36 +20,16 @@ export default function Home() {
   const [followPersonalId, setFollowPersonalId] = useState("");
 
   useEffect(() => {
-    // setPersonalId(getPersonalIdFromSession());
     const sessionId = getSessionId();
-    console.log("sessionId:", sessionId);
     if (sessionId) {
       fetchUserProfile();
     }
   }, []);
 
-  useEffect(() => {
-    // const user = localStorage.getItem("user");
-    // setPersonalId(getPersonalIdFromSession());
-    // if (personalId !== "") {
-    //   setIsAuthenticated(true);
-    // }
-    // if (personalId && personalId !== "") {
-    //   setIsAuthenticated(true);
-    // }
-    // console.log("personal id:", personalId);
-  }, [personalId]);
-
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
     setLoading(true);
-    setError("");
 
     try {
       const endpoint = isSignUp ? "signup" : "signin";
@@ -63,7 +40,10 @@ export default function Home() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({
+            email: inputEmailRef.current.value.trim(),
+            password: inputPasswordRef.current.value.trim(),
+          }),
           credentials: "include",
         }
       );
@@ -72,6 +52,8 @@ export default function Home() {
         alert(
           isSignUp ? "Account created successfully!" : "Signed in successfully!"
         );
+        const profile = await response.json();
+        setProfile(profile);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
@@ -131,11 +113,7 @@ export default function Home() {
       .then((response) => {
         if (response.ok) {
           alert("Logged out successfully");
-          setUsername("");
-          setEmail("");
-          setFollowers(0);
-          setFollowing(0);
-          setPersonalId("");
+          setProfile(null);
           setIsAuthenticated(false);
           setShowProfile(false);
         } else {
@@ -162,21 +140,7 @@ export default function Home() {
       );
       if (response.ok) {
         const profile = await response.json();
-        setUsername(profile.username);
-        setEmail(profile.email);
-        setFollowers(profile.followers);
-        setFollowing(profile.following);
-        setPersonalId(profile.personalId);
-        // const countResponse = await fetch(
-        //   `${
-        //     process.env.NEXT_PUBLIC_BACKEND
-        //   }/api/get-follow-counts/${getSessionId()}`
-        // );
-        // if (countResponse.ok) {
-        //   const { followers, following } = await countResponse.json();
-        //   setFollowers(followers);
-        //   setFollowing(following);
-        // }
+        setProfile(profile);
         setIsAuthenticated(true);
       }
     } catch (error) {
@@ -187,10 +151,6 @@ export default function Home() {
   const handleProfileClick = () => {
     fetchUserProfile();
     setShowProfile(true);
-  };
-
-  const handleUsernameChange = (e) => {
-    setNewUsername(e.target.value);
   };
 
   const handleUsernameSubmit = async () => {
@@ -204,14 +164,15 @@ export default function Home() {
           },
           body: JSON.stringify({
             sessionId: getSessionId(),
-            username: newUsername,
+            username: inputNewUsernameRef.current.value.trim(),
           }),
           credentials: "include",
         }
       );
 
       if (response.ok) {
-        setUsername(newUsername);
+        const profile = await response.json();
+        setProfile(profile);
         alert("Username updated successfully!");
       } else {
         const data = await response.json();
@@ -224,17 +185,7 @@ export default function Home() {
   };
 
   const handleFollowSubmit = async () => {
-    if (!personalId) {
-      setError("User not authenticated");
-      return;
-    }
-
     try {
-      console.log("Sending follow request:", {
-        myPersonalId: personalId,
-        theirPersonalId: followPersonalId,
-      });
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND}/api/follow`,
         {
@@ -251,8 +202,8 @@ export default function Home() {
       );
 
       if (response.ok) {
-        const data = await response.json();
-        setFollowing((prev) => prev + 1);
+        const profile = await response.json();
+        setProfile(profile);
         alert("Followed successfully!");
         setShowFollowPanel(false);
       } else {
@@ -310,13 +261,14 @@ export default function Home() {
               <h2 className="text-xl font-bold mb-4">Profile</h2>
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm">Username: {username}</label>
+                  <label className="block text-sm">
+                    Username: {profile.username}
+                  </label>
                 </div>
                 <div className="flex items-center">
                   <input
                     type="text"
-                    value={newUsername}
-                    onChange={handleUsernameChange}
+                    ref={inputNewUsernameRef}
                     className="w-full p-2 border border-gray-300 rounded mr-2"
                     placeholder="Enter a new username"
                   />
@@ -331,13 +283,13 @@ export default function Home() {
               <div className="mb-4">
                 <div className="flex justify-between items-center">
                   <label className="block text-sm">
-                    Followers: {followers}
+                    Followers: {profile.followers}
                   </label>
                   <label className="block text-sm">
-                    Following: {following}
+                    Following: {profile.following}
                   </label>
                   <label className="block text-sm">
-                    Personal ID: {personalId}
+                    Personal ID: {profile.personalId}
                   </label>
                 </div>
               </div>
@@ -404,8 +356,7 @@ export default function Home() {
                 <label className="block text-sm">Email</label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  ref={inputEmailRef}
                   className="w-full p-2 border border-gray-300 rounded"
                   placeholder="Enter your email"
                   required
@@ -415,8 +366,7 @@ export default function Home() {
                 <label className="block text-sm">Password</label>
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  ref={inputPasswordRef}
                   className="w-full p-2 border border-gray-300 rounded"
                   placeholder="Enter your password"
                   required
@@ -458,7 +408,7 @@ export default function Home() {
           </div>
         )}
 
-        <VipGame username={username} />
+        <VipGame />
       </div>
     </GoogleOAuthProvider>
   );

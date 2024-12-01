@@ -16,7 +16,7 @@ import { deleteGame, checkGame } from "../../api/dbApi";
 
 /* The main multiplayer game. */
 
-export default function VipGame({ username }) {
+export default function VipGame() {
   const [stream, setStream] = useState(null); // the outgoing stream of our canvas
   const [canvasSaveFunc, setCanvasSaveFunc] = useState(null); // function to save canvas. set when the canvas is loaded, so this is defined in VipCanvas
   const videoElems = useRef(null); // video elements for all the streams

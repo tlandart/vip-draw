@@ -5,7 +5,6 @@ import { OAuth2Client } from "google-auth-library";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-// const { parse, serialize } from "cookie";
 import { createServer } from "http";
 import { parse, serialize } from "cookie";
 
@@ -31,12 +30,13 @@ app.use((req, res, next) => {
 
 app.use(
   session({
-    secret: "vip",
+    // secret: process.env.SECRET_KEY,
+    secret: "dfsdf",
     resave: false,
     saveUninitialized: true,
     cookie: {
       httpOnly: true,
-      secure: false, // TODO update this with .env flag
+      secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
     },
   })
@@ -148,7 +148,7 @@ app.post("/api/signup", async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    await redisClient.hSet(`user:${personalId}`, {
+    const user = {
       personalId,
       sessionId: sessionId,
       email: email,
@@ -156,7 +156,9 @@ app.post("/api/signup", async (req, res) => {
       username: defaultUsername,
       followers: 0,
       following: 0,
-    });
+    };
+
+    await redisClient.hSet(`user:${personalId}`, user);
     await redisClient.set(`email:${email}`, personalId);
     await redisClient.set(`sessionId:${sessionId}`, personalId);
     // start a session
@@ -169,7 +171,7 @@ app.post("/api/signup", async (req, res) => {
         credentials: true,
       })
     );
-    res.status(201).json(personalId);
+    res.status(201).json(user);
   } catch (error) {
     console.error("Error during signup:", error);
     res.status(500).json({ message: "Failed to create account" });
@@ -208,7 +210,7 @@ app.post("/api/signin", async (req, res) => {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
       })
     );
-    res.status(200).json(existingUser.personalId);
+    res.status(200).json(existingUser);
   } catch (error) {
     console.error("Error during sign-in:", error);
     res.status(500).json({ message: "Failed to sign in" });
@@ -236,17 +238,17 @@ app.post("/api/google-login", async (req, res) => {
       const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
       const personalId = sub;
       const sessionId = uuidv4();
-      const followers = 0;
-      const following = 0;
 
-      await redisClient.hSet(`user:${personalId}`, {
+      user = {
         personalId,
         sessionId: sessionId,
         email: email,
         username: defaultUsername,
-        followers: followers.toString(),
-        following: following.toString(),
-      });
+        followers: 0,
+        following: 0,
+      };
+
+      await redisClient.hSet(`user:${personalId}`, user);
       await redisClient.set(`email:${email}`, personalId);
       await redisClient.set(`sessionId:${sessionId}`, personalId);
       console.log(
@@ -262,12 +264,12 @@ app.post("/api/google-login", async (req, res) => {
     req.session.session_id = sub;
     res.setHeader(
       "Set-Cookie",
-      serialize("personalId", sub, {
+      serialize("session_id", sub, {
         path: "/",
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
       })
     );
-    res.status(201).json(sub);
+    res.status(201).json(user);
   } catch (err) {
     console.error("Error verifying Google ID token:", err);
     res.status(500).send({ message: "Failed to authenticate user." });
@@ -356,14 +358,15 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
   const personalId = await redisClient.get(`sessionId:${sessionId}`);
 
   try {
-    const user = await redisClient.hGetAll(`user:${personalId}`);
+    let user = await redisClient.hGetAll(`user:${personalId}`);
 
     if (Object.keys(user).length === 0) {
       return res.status(404).json({ message: "User not found." });
     }
 
     await redisClient.hSet(`user:${personalId}`, { username });
-    res.status(200).json({ message: "Username updated successfully." });
+    user.username = username;
+    res.status(200).json(user);
   } catch (error) {
     console.error("Error updating username:", error);
     res.status(500).json({ message: "Failed to update username." });
@@ -386,7 +389,7 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
   }
 
   try {
-    const follower = await redisClient.hGetAll(`user:${myPersonalId}`);
+    let follower = await redisClient.hGetAll(`user:${myPersonalId}`);
     const following = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
     if (
@@ -416,9 +419,9 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
       .hIncrBy(`user:${theirPersonalId}`, "followers", 1)
       .exec();
 
-    res.status(200).json({
-      message: `${myPersonalId} is now following ${theirPersonalId}.`,
-    });
+    follower.following++;
+
+    res.status(200).json(follower);
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json({ message: "Failed to follow user." });
