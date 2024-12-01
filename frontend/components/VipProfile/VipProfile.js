@@ -1,10 +1,12 @@
 import { accountUsernameSubmit, accountLogout } from "@/api/dbApi";
+import { useRef } from "react";
 
 /*
   Draws a given profile.
     - profile: object that contains profile information
     - setProfile: function to change profile at a higher level
     - isMine: boolean, determines if this is the client's profile or not (whether to draw some buttons)
+    - onLogout: function to log out of account
     - onClose: function to close this component
     - onError: function to set error text at a higher level
 */
@@ -14,11 +16,13 @@ export default function VipProfile({
   setProfile,
   isMine,
   onClose,
+  onLogout,
   onError,
 }) {
   const inputNewUsernameRef = useRef();
 
-  const handleUsernameSubmit = async () => {
+  const handleUsernameSubmit = async (e) => {
+    e.preventDefault();
     let pf = await accountUsernameSubmit(
       inputNewUsernameRef.current.value.trim()
     );
@@ -29,22 +33,11 @@ export default function VipProfile({
     }
   };
 
-  const handleLogout = async () => {
-    let response = await accountLogout();
-    if (!response.err) {
-      setProfile(null);
-      setIsAuthenticated(false);
-      onClose();
-    } else {
-      onError("Failed to log out");
-    }
-  };
-
   return (
     <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
-      <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
+      {profile && <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
         <button
-          onClick={() => close()}
+          onClick={() => onClose()}
           className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
         >
           X
@@ -84,7 +77,7 @@ export default function VipProfile({
 
         <div className="flex flex-row gap-3 absolute bottom-5">
           {isMine && <button
-            onClick={handleLogout}
+            onClick={onLogout}
             className="absolute bg-red-500 text-white p-2 rounded mt-4 mx-auto"
           >
             Log Out
@@ -93,7 +86,7 @@ export default function VipProfile({
             Personal ID: {profile.personalId}
           </label>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
