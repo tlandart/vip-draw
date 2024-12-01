@@ -17,15 +17,15 @@ services:
       - backend
 
   # reverse proxy let's encrypt companion
-  nginx-proxy-acme:
-    image: nginxproxy/acme-companion
-    container_name: nginx-proxy-acme
-    restart: always
-    volumes_from:
-      - nginx-proxy
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./acme:/etc/acme.sh
+  # nginx-proxy-acme:
+  #   image: nginxproxy/acme-companion
+  #   container_name: nginx-proxy-acme
+  #   restart: always
+  #   volumes_from:
+  #     - nginx-proxy
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ./acme:/etc/acme.sh
 
   # frontend
   frontend:
