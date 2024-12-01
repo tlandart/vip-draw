@@ -34,9 +34,9 @@ app.use(
   session({
     secret: process.env.SECRET_KEY,
     resave: true,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
-      // httpOnly: true,
+      httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
     },
@@ -345,20 +345,48 @@ app.post("/api/logout", isAuthenticated, (req, res) => {
 });
 
 app.get("/api/get-profile/", async (req, res) => {
-  let { sessionId, personalId } = req.query;
+  const { sessionId, personalId } = req.query;
 
-  // if personalId is null, get their own profile from sessionid
-  if (!personalId || personalId === "null") {
-    if (!sessionId)
-      return res.status(400).json("Session ID or personalId is required.");
-    personalId = await redisClient.get(`sessionId:${sessionId}`);
+  let myPersonalId, theirPersonalId;
+
+  if ((!personalId || personalId === "null") && !sessionId)
+    return res.status(400).json("Session ID or personalId is required.");
+  else if (!personalId || personalId === "null") {
+    // if personalId is null, get their own profile from sessionid
+    const a = await redisClient.get(`sessionId:${sessionId}`);
+    myPersonalId = a;
+    theirPersonalId = a;
+  } else if (!sessionId) {
+    // if sessionId is null, get their profile
+    theirPersonalId = personalId;
+  } else {
+    // if both are present, find their profile while checking if ours follows it
+    myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
+    theirPersonalId = personalId;
   }
 
   try {
-    const userProfile = await redisClient.hGetAll(`user:${personalId}`);
+    let userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
     if (Object.keys(userProfile).length === 0) {
       return res.status(404).json("User not found.");
+    }
+
+    // if the user that called this (sessionId) is following personalId
+    // (which could be themselves, in which case this means nothing),
+    // flag it in the returned object
+    userProfile.isFollowing = false;
+    if (myPersonalId) {
+      const personalIds = await redisClient.lRange(
+        `following:${myPersonalId}`,
+        0,
+        -1
+      );
+      for (const id of personalIds) {
+        if (id == theirPersonalId) {
+          userProfile.isFollowing = true;
+        }
+      }
     }
 
     res.status(200).json(userProfile);
@@ -400,10 +428,10 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
 app.post("/api/follow", isAuthenticated, async (req, res) => {
   const { sessionId, theirPersonalId } = req.body;
 
-  if (!myPersonalId || !theirPersonalId) {
+  if (!sessionId || !theirPersonalId) {
     return res
       .status(400)
-      .json("Both your personalId and their personalId are required.");
+      .json("Both your sessionId and their personalId are required.");
   }
 
   // ensure it is really the user
@@ -411,9 +439,7 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
-
-  if (myPersonalId !== req.session.personalId)
-    return res.status(403).end("forbidden");
+  if (myPersonalId === theirPersonalId) return res.status(403).end("forbidden");
 
   try {
     const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
@@ -439,7 +465,10 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
     await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1);
     await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
 
-    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
+    userProfile.followers++;
+
+    // return the unfollowed user's profile
+    res.status(200).json(userProfile);
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json("Failed to follow user.");
@@ -460,12 +489,10 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
-
-  if (myPersonalId !== req.session.personalId)
-    return res.status(403).end("forbidden");
+  if (myPersonalId === theirPersonalId) return res.status(403).end("forbidden");
 
   try {
-    const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
+    let userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
     if (Object.keys(userProfile).length === 0) {
       return res.status(404).json("User not found.");
@@ -477,18 +504,24 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
       -1
     );
 
+    let isFollowing = false;
     for (const id of personalIds) {
       if (id == theirPersonalId) {
-        return res.status(400).json("You don't follow this user.");
+        isFollowing = true;
       }
     }
+    if (!isFollowing)
+      return res.status(400).json("You don't follow this user.");
 
-    await redisClient.lRem(`followers:${theirPersonalId}`, myPersonalId);
-    await redisClient.lRem(`following:${myPersonalId}`, theirPersonalId);
+    await redisClient.lRem(`followers:${theirPersonalId}`, 0, myPersonalId);
+    await redisClient.lRem(`following:${myPersonalId}`, 0, theirPersonalId);
     await redisClient.hIncrBy(`user:${myPersonalId}`, "following", -1);
     await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", -1);
 
-    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
+    userProfile.followers--;
+
+    // return the unfollowed user's profile
+    res.status(200).json(userProfile);
   } catch (error) {
     console.error("Error unfollowing user:", error);
     res.status(500).json("Failed to unfollow user.");

@@ -9,10 +9,8 @@ import {
   accountLogout,
   accountSignupOrSignin,
   accountFetchProfile,
-  accountUsernameSubmit,
   getSessionId,
   ping,
-  accountFollow,
 } from "@/api/dbApi";
 
 export default function Home() {
@@ -54,7 +52,6 @@ export default function Home() {
         inputEmailRef.current.value.trim(),
         inputPasswordRef.current.value.trim()
       );
-      console.log("got profile", profile);
 
       if (!profile.err) {
         setProfile(profile);
@@ -76,7 +73,6 @@ export default function Home() {
 
   const handleGoogleLoginSuccess = async (response) => {
     const profile = await accountGoogleSignin(response.credential);
-    console.log("got profile", profile);
     setProfile(profile);
     setIsAuthenticated(true);
   };
@@ -108,6 +104,7 @@ export default function Home() {
   const fetchUserProfile = async () => {
     let profile = await accountFetchProfile();
     if (!profile.err) {
+      console.log("got profile", profile);
       setProfile(profile);
       setIsAuthenticated(true);
     } else {
@@ -118,6 +115,7 @@ export default function Home() {
   const fetchOtherUserProfile = async (pid) => {
     let otherProfile = await accountFetchProfile(pid);
     if (!otherProfile.err) {
+      console.log("got OTHER profile", otherProfile);
       setshowFindPanel(false);
       setOtherProfile(otherProfile);
     } else {
@@ -193,6 +191,7 @@ export default function Home() {
 
         {otherProfile && (
           <VipProfile
+            clientProfile={profile}
             profile={otherProfile}
             setProfile={setOtherProfile}
             isMine={false}

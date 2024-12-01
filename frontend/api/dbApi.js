@@ -92,8 +92,10 @@ export async function accountUsernameSubmit(newUsername) {
   }).then(handleResponse);
 }
 
-export async function accountFollow(followPersonalId) {
-  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/follow`, {
+export async function accountFollowUnfollow(action, followPersonalId) {
+  if (!["follow", "unfollow"].includes(action))
+    return { err: "Invalid action." };
+  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/${action}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
