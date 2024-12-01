@@ -5,7 +5,7 @@ import { OAuth2Client } from "google-auth-library";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-import * as https from "https";
+// import * as https from "https";
 import * as http from "http";
 // import { createServer } from "http";
 import { parse, serialize } from "cookie";
@@ -344,10 +344,15 @@ app.post("/api/logout", isAuthenticated, (req, res) => {
   });
 });
 
-app.get("/api/get-profile/:sessionId", async (req, res) => {
-  const { sessionId } = req.params;
+app.get("/api/get-profile/", async (req, res) => {
+  let { sessionId, personalId } = req.query;
 
-  const personalId = await redisClient.get(`sessionId:${sessionId}`);
+  // if personalId is null, get their own profile from sessionid
+  if (!personalId || personalId === "null") {
+    if (!sessionId)
+      return res.status(400).json("Session ID or personalId is required.");
+    personalId = await redisClient.get(`sessionId:${sessionId}`);
+  }
 
   try {
     const userProfile = await redisClient.hGetAll(`user:${personalId}`);
@@ -395,50 +400,46 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
 app.post("/api/follow", isAuthenticated, async (req, res) => {
   const { sessionId, theirPersonalId } = req.body;
 
-  // ensure it is really the user
-  if (sessionId !== req.session.session_id)
-    return res.status(403).end("forbidden");
-
-  const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
-
   if (!myPersonalId || !theirPersonalId) {
     return res
       .status(400)
       .json("Both your personalId and their personalId are required.");
   }
 
-  try {
-    let follower = await redisClient.hGetAll(`user:${myPersonalId}`);
-    const following = await redisClient.hGetAll(`user:${theirPersonalId}`);
+  // ensure it is really the user
+  if (sessionId !== req.session.session_id)
+    return res.status(403).end("forbidden");
 
-    if (
-      Object.keys(follower).length === 0 ||
-      Object.keys(following).length === 0
-    ) {
-      return res.status(404).json("One or both users not found.");
+  const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
+
+  if (myPersonalId !== req.session.personalId)
+    return res.status(403).end("forbidden");
+
+  try {
+    const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
+
+    if (Object.keys(userProfile).length === 0) {
+      return res.status(404).json("User not found.");
     }
 
-    const followKey = `following:${myPersonalId}`;
-    const alreadyFollowing = await redisClient.sIsMember(
-      followKey,
-      theirPersonalId
+    const personalIds = await redisClient.lRange(
+      `following:${myPersonalId}`,
+      0,
+      -1
     );
 
-    if (alreadyFollowing) {
-      return res.status(400).json("You are already following this user.");
+    for (const id of personalIds) {
+      if (id == theirPersonalId) {
+        return res.status(400).json("You are already following this user.");
+      }
     }
 
-    await redisClient
-      .multi()
-      .sAdd(followKey, theirPersonalId)
-      .sAdd(`followers:${theirPersonalId}`, myPersonalId)
-      .hIncrBy(`user:${myPersonalId}`, "following", 1)
-      .hIncrBy(`user:${theirPersonalId}`, "followers", 1)
-      .exec();
+    await redisClient.rPush(`followers:${theirPersonalId}`, myPersonalId);
+    await redisClient.rPush(`following:${myPersonalId}`, theirPersonalId);
+    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1);
+    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
 
-    follower.following++;
-
-    res.status(200).json(follower);
+    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json("Failed to follow user.");
@@ -464,35 +465,30 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
     return res.status(403).end("forbidden");
 
   try {
-    const follower = await redisClient.hGetAll(`user:${myPersonalId}`);
-    const following = await redisClient.hGetAll(`user:${theirPersonalId}`);
+    const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
-    if (
-      Object.keys(follower).length === 0 ||
-      Object.keys(following).length === 0
-    ) {
-      return res.status(404).json("One or both users not found.");
+    if (Object.keys(userProfile).length === 0) {
+      return res.status(404).json("User not found.");
     }
 
-    const followKey = `following:${myPersonalId}`;
-    const alreadyFollowing = await redisClient.sIsMember(
-      followKey,
-      theirPersonalId
+    const personalIds = await redisClient.lRange(
+      `following:${myPersonalId}`,
+      0,
+      -1
     );
 
-    if (!alreadyFollowing) {
-      return res.status(400).json("You are not following this user.");
+    for (const id of personalIds) {
+      if (id == theirPersonalId) {
+        return res.status(400).json("You don't follow this user.");
+      }
     }
 
-    await redisClient
-      .multi()
-      .sRem(followKey, theirPersonalId)
-      .sRem(`followers:${theirPersonalId}`, myPersonalId)
-      .hIncrBy(`user:${myPersonalId}`, "following", -1)
-      .hIncrBy(`user:${theirPersonalId}`, "followers", -1)
-      .exec();
+    await redisClient.lRem(`followers:${theirPersonalId}`, myPersonalId);
+    await redisClient.lRem(`following:${myPersonalId}`, theirPersonalId);
+    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", -1);
+    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", -1);
 
-    res.status(200).json(`${myPersonalId} has unfollowed ${theirPersonalId}.`);
+    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
   } catch (error) {
     console.error("Error unfollowing user:", error);
     res.status(500).json("Failed to unfollow user.");
@@ -504,14 +500,14 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //   console.log(`Server running on http://localhost:${PORT}`);
 // });
 
-if (process.env.COOKIE_SECURE === "true") {
-  https.createServer(app).listen(PORT, function (err) {
-    if (err) console.log(err);
-    else console.log(`HTTP server on http://localhost:${PORT}`);
-  });
-} else {
-  http.createServer(app).listen(PORT, function (err) {
-    if (err) console.log(err);
-    else console.log(`HTTP server on http://localhost:${PORT}`);
-  });
-}
+// if (process.env.COOKIE_SECURE === "true") {
+//   https.createServer(app).listen(PORT, function (err) {
+//     if (err) console.log(err);
+//     else console.log(`HTTP server on http://localhost:${PORT}`);
+//   });
+// } else {
+http.createServer(app).listen(PORT, function (err) {
+  if (err) console.log(err);
+  else console.log(`HTTP server on http://localhost:${PORT}`);
+});
+// }

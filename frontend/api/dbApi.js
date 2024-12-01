@@ -62,9 +62,12 @@ export async function accountLogout() {
   }).then(handleResponse);
 }
 
-export async function accountFetchProfile() {
+export async function accountFetchProfile(personalId = null) {
   return fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${getSessionId()}`,
+    `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile?${new URLSearchParams({
+      sessionId: getSessionId(),
+      personalId: personalId,
+    })}`,
     {
       method: "GET",
       headers: {

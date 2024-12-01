@@ -17,17 +17,17 @@ import {
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
+  const [otherProfile, setOtherProfile] = useState(null);
   const inputEmailRef = useRef();
   const inputPasswordRef = useRef();
-  const inputNewUsernameRef = useRef();
+  const inputFindRef = useRef();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showFollowPanel, setShowFollowPanel] = useState(false);
-  const [followPersonalId, setFollowPersonalId] = useState("");
+  const [showFindPanel, setshowFindPanel] = useState(false);
 
   useEffect(() => {
     const sessionId = getSessionId();
@@ -95,6 +95,10 @@ export default function Home() {
     setShowProfile(false);
   };
 
+  const closeOtherProfile = () => {
+    setOtherProfile(null);
+  };
+
   const fetchUserProfile = async () => {
     let profile = await accountFetchProfile();
     if (!profile.err) {
@@ -105,9 +109,24 @@ export default function Home() {
     }
   };
 
+  const fetchOtherUserProfile = async (pid) => {
+    let otherProfile = await accountFetchProfile(pid);
+    if (!otherProfile.err) {
+      setshowFindPanel(false);
+      setOtherProfile(otherProfile);
+    } else {
+      setError("Error fetching other user profile.");
+    }
+  };
+
   const handleProfileClick = () => {
     fetchUserProfile();
     setShowProfile(true);
+  };
+
+  const handleOtherProfileClick = (e) => {
+    e.preventDefault();
+    fetchOtherUserProfile(inputFindRef.current.value.trim());
   };
 
   const handleFollowSubmit = async () => {
@@ -116,7 +135,7 @@ export default function Home() {
 
       if (!profile.err) {
         setProfile(profile);
-        setShowFollowPanel(false);
+        setshowFindPanel(false);
       } else {
         setError(profile.err || "Failed to follow");
       }
@@ -126,8 +145,8 @@ export default function Home() {
     }
   };
 
-  const handleFollowPanelClose = () => {
-    setShowFollowPanel(false);
+  const handleFindPanelClose = () => {
+    setshowFindPanel(false);
   };
 
   return (
@@ -165,44 +184,54 @@ export default function Home() {
           />
         )}
 
+        {otherProfile && (
+          <VipProfile
+            profile={otherProfile}
+            setProfile={setOtherProfile}
+            isMine={false}
+            onClose={closeOtherProfile}
+            onError={(e) => setError(e)}
+          />
+        )}
+
         <div className="absolute bottom-20 right-2">
           {isAuthenticated && (
             <button
-              onClick={() => setShowFollowPanel(true)}
+              onClick={() => setshowFindPanel(true)}
               className="bg-blue-500 text-white p-2 rounded"
             >
-              Follow Someone
+              Find Someone
             </button>
           )}
         </div>
 
-        {showFollowPanel && (
+        {showFindPanel && (
           <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
             <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
               <button
-                onClick={handleFollowPanelClose}
+                onClick={handleFindPanelClose}
                 className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
               >
                 X
               </button>
-              <h2 className="text-xl font-bold mb-4">Follow Someone</h2>
+              <h2 className="text-xl font-bold mb-4">Find Someone</h2>
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-              <div className="mb-4">
+              <form className="mb-4">
                 <label className="block text-sm">Enter Personal ID:</label>
                 <input
                   type="text"
-                  value={followPersonalId}
-                  onChange={(e) => setFollowPersonalId(e.target.value)}
+                  ref={inputFindRef}
                   className="w-full p-2 border border-gray-300 rounded mt-2"
                   placeholder="Personal ID"
                 />
-              </div>
-              <button
-                onClick={handleFollowSubmit}
-                className="bg-blue-500 text-white p-2 rounded mt-4"
-              >
-                Follow
-              </button>
+                <button
+                  type="submit"
+                  onClick={handleOtherProfileClick}
+                  className="bg-blue-500 text-white p-2 rounded mt-4"
+                >
+                  Find User
+                </button>
+              </form>
             </div>
           </div>
         )}
