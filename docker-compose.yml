@@ -9,7 +9,7 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./certs:/etc/nginx/certs
+      # - ./certs:/etc/nginx/certs
       - ./vhost:/etc/nginx/vhost.d
       - ./html:/usr/share/nginx/html
     depends_on:
@@ -34,7 +34,7 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${FRONTEND_DOMAIN}
-      - LETSENCRYPT_HOST=${FRONTEND_DOMAIN}
+      # - LETSENCRYPT_HOST=${FRONTEND_DOMAIN}
 
   # backend
   backend:
@@ -43,7 +43,7 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
-      - LETSENCRYPT_HOST=${BACKEND_DOMAIN}
+      # - LETSENCRYPT_HOST=${BACKEND_DOMAIN}
     depends_on:
       - redis
 
