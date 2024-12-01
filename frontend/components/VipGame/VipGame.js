@@ -12,7 +12,7 @@ import {
 import VipCanvas from "../VipCanvas/VipCanvas";
 import VipMessages from "../VipMessages/VipMessages";
 import VipTimer from "../VipTimer/VipTimer";
-import { deleteGame, checkGame } from "../../api/dbApi";
+import { accountDeleteGame, accountJoinGame } from "../../api/dbApi";
 
 /* The main multiplayer game. */
 
@@ -29,7 +29,6 @@ export default function VipGame() {
   const [showBackButton, setShowBackButton] = useState(false); // State for the back button
   const [errorMessage, setErrorMessage] = useState(""); // State to store error message
   const [fadeOut, setFadeOut] = useState(false); // To track the fade-out effect
-  const [reactions, setReactions] = useState([]);
 
   // game logic
   const [gameState, setGameState] = useState({ start: 0, playerCount: 0 });
@@ -108,11 +107,11 @@ export default function VipGame() {
     console.log("Attempting to join game with ID:", remoteId);
 
     inputIdRef.current.value = "";
-    checkGame(remoteId)
-      .then((data) => {
-        if (data.error) {
-          console.log(data.error);
-          setErrorMessage(data.error);
+    accountJoinGame(remoteId)
+      .then((response) => {
+        if (response.err) {
+          console.log(response.err);
+          setErrorMessage(response.err);
           setFadeOut(false);
 
           setTimeout(() => {
@@ -123,7 +122,7 @@ export default function VipGame() {
           }, 5000);
         } else {
           // Proceed if the game ID is valid
-          console.log("Game is valid:", data);
+          console.log("Game is valid:", response);
           peerJoin(
             setGameState,
             restartTimerFunc,
@@ -175,13 +174,9 @@ export default function VipGame() {
       const hostId = idLabelRef.current.innerHTML
         .replace("Host ID: ", "")
         .trim();
-      deleteGame(hostId)
-        .then(() => {
-          console.log("Host ID deleted successfully.");
-        })
-        .catch((err) => {
-          console.error("Failed to delete host ID:", err);
-        });
+      accountDeleteGame(hostId).catch((err) => {
+        console.error("Failed to delete host ID:", err);
+      });
     }
     peerDisconnect(stream);
 
@@ -211,8 +206,12 @@ export default function VipGame() {
 
   return (
     <>
-      <span>{gameStateToString()}</span>
-      <span ref={idLabelRef}></span>
+      {/* <span>{gameStateToString()}</span> */}
+
+      <span
+        className="text-3xl flex w-fit ml-auto mr-auto mt-5"
+        ref={idLabelRef}
+      ></span>
 
       {gameState.start === 0 && (
         <div className="button-container">
@@ -283,7 +282,9 @@ export default function VipGame() {
               {showCanvas && (
                 <>
                   <span className="block text-xl">Draw!</span>
-                  <span className="block text-xl">Word: {gameState.currentWord}</span>
+                  <span className="block text-xl">
+                    Word: {gameState.currentWord}
+                  </span>
                 </>
               )}
               {playerNum.current !== gameState.currentPlayer && (
@@ -303,7 +304,8 @@ export default function VipGame() {
                   minDist={1}
                 />
               </div>
-              {playerNum.current !== gameState.currentPlayer && videoElems.current[showVideoNum]}
+              {playerNum.current !== gameState.currentPlayer &&
+                videoElems.current[showVideoNum]}
               <VipMessages
                 messages={gameState.messages}
                 reactions={gameState.reactions}

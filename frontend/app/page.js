@@ -1,18 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import VipGame from "../components/VipGame/VipGame";
-import { ping } from "../api/dbApi";
+import {
+  accountGoogleSignin,
+  accountLogout,
+  accountSignupOrSignin,
+  accountFetchProfile,
+  accountUsernameSubmit,
+  getSessionId,
+  ping,
+  accountFollow,
+} from "../api/dbApi";
 
 export default function Home() {
-  const [email, setEmail] = useState("");
-  const [username, setUsername] = useState("");
-  const [newUsername, setNewUsername] = useState(username);
-  const [password, setPassword] = useState("");
-  const [followers, setFollowers] = useState(0);
-  const [following, setFollowing] = useState(0);
-  const [personalId, setPersonalId] = useState("");
+  const [profile, setProfile] = useState(null);
+  const inputEmailRef = useRef();
+  const inputPasswordRef = useRef();
+  const inputNewUsernameRef = useRef();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -23,47 +29,33 @@ export default function Home() {
   const [followPersonalId, setFollowPersonalId] = useState("");
 
   useEffect(() => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      setIsAuthenticated(true);
+    const sessionId = getSessionId();
+    if (sessionId) {
+      fetchUserProfile();
     }
   }, []);
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
     setLoading(true);
-    setError("");
 
     try {
-      const endpoint = isSignUp ? "signup" : "signin";
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/${endpoint}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
+      const action = isSignUp ? "signup" : "signin";
+      const profile = await accountSignupOrSignin(
+        action,
+        inputEmailRef.current.value.trim(),
+        inputPasswordRef.current.value.trim()
       );
+      console.log("got profile", profile);
 
-      if (response.ok) {
-        alert(
-          isSignUp ? "Account created successfully!" : "Signed in successfully!"
-        );
-        localStorage.setItem("user", email);
+      if (!profile.err) {
+        setProfile(profile);
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
-        const data = await response.json();
         setError(
-          data.message ||
+          profile.err ||
             (isSignUp ? "Failed to create account" : "Failed to sign in")
         );
       }
@@ -76,31 +68,10 @@ export default function Home() {
   };
 
   const handleGoogleLoginSuccess = async (response) => {
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/google-login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ credential: response.credential }),
-        }
-      );
-
-      if (res.ok) {
-        alert("Google login successful!");
-        const data = await res.json();
-        const userEmail = data.user.email;
-        localStorage.setItem("user", userEmail);
-        setIsAuthenticated(true);
-      } else {
-        setError("Failed to login with Google");
-      }
-    } catch (error) {
-      console.error("Error during Google login:", error);
-      setError("Failed to login with Google");
-    }
+    const profile = await accountGoogleSignin(response.credential);
+    console.log("got profile", profile);
+    setProfile(profile);
+    setIsAuthenticated(true);
   };
 
   const handleGoogleLoginFailure = (error) => {
@@ -108,137 +79,52 @@ export default function Home() {
     setError("Google login failed");
   };
 
-  const handleLogout = () => {
-    const user = localStorage.getItem("user");
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/logout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ email: user }),
-    })
-      .then((response) => {
-        if (response.ok) {
-          alert("Logged out successfully");
-          localStorage.removeItem("user");
-          setIsAuthenticated(false);
-          setShowProfile(false);
-        } else {
-          setError("Failed to log out");
-        }
-      })
-      .catch((error) => {
-        console.error("Error during logout:", error);
-        setError("Failed to log out");
-      });
+  const handleLogout = async () => {
+    let response = await accountLogout();
+    if (!response.err) {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
+    } else {
+      setError("Failed to log out");
+    }
   };
 
-  const fetchUserProfile = async (userEmail) => {
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${userEmail}`
-      );
-      if (response.ok) {
-        const profile = await response.json();
-        setUsername(profile.username);
-        setEmail(profile.email);
-        setPersonalId(profile.personalId);
-        const countResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND}/api/get-follow-counts/${userEmail}`
-        );
-        if (countResponse.ok) {
-          const { followers, following } = await countResponse.json();
-          setFollowers(followers);
-          setFollowing(following);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching user profile:", error);
+  const fetchUserProfile = async () => {
+    let profile = await accountFetchProfile();
+    if (!profile.err) {
+      setProfile(profile);
+      setIsAuthenticated(true);
+    } else {
+      setError("Error fetching user profile.");
     }
   };
 
   const handleProfileClick = () => {
-    const user = localStorage.getItem("user");
-    if (user) {
-      fetchUserProfile(user);
-      setShowProfile(true);
-    }
-  };
-
-  const handleUsernameChange = (e) => {
-    setNewUsername(e.target.value);
+    fetchUserProfile();
+    setShowProfile(true);
   };
 
   const handleUsernameSubmit = async () => {
-    try {
-      const userEmail = localStorage.getItem("user");
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/update-username`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: userEmail,
-            username: newUsername,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        setUsername(newUsername);
-        alert("Username updated successfully!");
-      } else {
-        const data = await response.json();
-        alert(data.message || "Failed to update username.");
-      }
-    } catch (error) {
-      console.error("Error updating username:", error);
-      alert("Error updating username.");
+    let profile = await accountUsernameSubmit(
+      inputNewUsernameRef.current.value.trim()
+    );
+    if (!profile.err) {
+      setProfile(profile);
+    } else {
+      setError("Failed to update username.");
     }
   };
 
   const handleFollowSubmit = async () => {
-    const userEmail = localStorage.getItem("user");
-    if (!userEmail) {
-      setError("User not authenticated");
-      return;
-    }
-
     try {
-      console.log("Sending follow request:", {
-        email: userEmail,
-        personalId: followPersonalId,
-      });
+      const profile = await accountFollow(followPersonalId);
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND}/api/follow`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: userEmail,
-            personalId: followPersonalId,
-          }),
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setFollowing((prev) => prev + 1);
-        alert("Followed successfully!");
+      if (!profile.err) {
+        setProfile(profile);
         setShowFollowPanel(false);
       } else {
-        const data = await response.json();
-        if (data.message === "You are already following this user.") {
-          setError("You are already following this user.");
-        } else {
-          setError(data.message || "Failed to follow");
-        }
+        setError(profile.err || "Failed to follow");
       }
     } catch (error) {
       console.error("Error following user:", error);
@@ -252,7 +138,6 @@ export default function Home() {
 
   return (
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
-      <button onClick={() => ping()}>ping</button>
       <div className="relative h-screen w-full">
         <div className="absolute top-20 right-2">
           {isAuthenticated ? (
@@ -277,7 +162,7 @@ export default function Home() {
 
         {showProfile && (
           <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
-            <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
+            <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
               <button
                 onClick={() => setShowProfile(false)}
                 className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
@@ -287,13 +172,14 @@ export default function Home() {
               <h2 className="text-xl font-bold mb-4">Profile</h2>
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm">Username: {username}</label>
+                  <label className="block text-sm">
+                    Username: {profile.username}
+                  </label>
                 </div>
                 <div className="flex items-center">
                   <input
                     type="text"
-                    value={newUsername}
-                    onChange={handleUsernameChange}
+                    ref={inputNewUsernameRef}
                     className="w-full p-2 border border-gray-300 rounded mr-2"
                     placeholder="Enter a new username"
                   />
@@ -306,25 +192,27 @@ export default function Home() {
                 </div>
               </div>
               <div className="mb-4">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-start gap-3">
                   <label className="block text-sm">
-                    Followers: {followers}
+                    Followers: {profile.followers}
                   </label>
                   <label className="block text-sm">
-                    Following: {following}
-                  </label>
-                  <label className="block text-sm">
-                    Personal ID: {personalId}
+                    Following: {profile.following}
                   </label>
                 </div>
               </div>
 
-              <button
-                onClick={handleLogout}
-                className="bg-red-500 text-white p-2 rounded mt-4 mx-auto"
-              >
-                Log Out
-              </button>
+              <div className="flex flex-row gap-3 absolute bottom-5">
+                <button
+                  onClick={handleLogout}
+                  className="absolute bg-red-500 text-white p-2 rounded mt-4 mx-auto"
+                >
+                  Log Out
+                </button>
+                <label className="block text-sm">
+                  Personal ID: {profile.personalId}
+                </label>
+              </div>
             </div>
           </div>
         )}
@@ -381,8 +269,7 @@ export default function Home() {
                 <label className="block text-sm">Email</label>
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  ref={inputEmailRef}
                   className="w-full p-2 border border-gray-300 rounded"
                   placeholder="Enter your email"
                   required
@@ -392,8 +279,7 @@ export default function Home() {
                 <label className="block text-sm">Password</label>
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  ref={inputPasswordRef}
                   className="w-full p-2 border border-gray-300 rounded"
                   placeholder="Enter your password"
                   required
@@ -435,7 +321,7 @@ export default function Home() {
           </div>
         )}
 
-        <VipGame />
+        {isAuthenticated && <VipGame />}
       </div>
     </GoogleOAuthProvider>
   );

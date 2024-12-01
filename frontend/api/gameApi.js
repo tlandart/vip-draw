@@ -1,5 +1,5 @@
 import { Peer } from "peerjs";
-import { createHost } from "./dbApi";
+import { accountCreateGame, accountGameGetUsernames } from "./dbApi";
 
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
@@ -74,6 +74,19 @@ function randomWord() {
   return words[Math.floor(Math.random() * words.length)];
 }
 
+function customPeerIdGen() {
+  // https://www.geeksforgeeks.org/generate-random-characters-numbers-in-javascript/
+  let result = "";
+  const characters =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+  for (let i = 0; i < 6; i++) {
+    const randomInd = Math.floor(Math.random() * characters.length);
+    result += characters.charAt(randomInd);
+  }
+  return result;
+}
+
 // from https://github.com/peers/peerjs/issues/323#issuecomment-477349226
 function createEmptyStream() {
   const canvas = Object.assign(document.createElement("canvas"), {});
@@ -101,7 +114,9 @@ export function peerHost(
   setGame = setGameState;
   restartTime = restartTimerFunc;
 
-  peer = new Peer();
+  const pidCustom = customPeerIdGen();
+  console.log(pidCustom);
+  peer = new Peer(pidCustom);
 
   peer.on("open", async function (id) {
     console.log("starting peer.", id);
@@ -113,13 +128,23 @@ export function peerHost(
 
     idLabelRef.current.innerHTML = "Host ID: " + id;
 
-    gameSt = { ...gameSt, start: 1, playerCount: 1, ids: [id] };
+    gameSt = {
+      ...gameSt,
+      start: 1,
+      playerCount: 1,
+      ids: [id],
+      usernames: ["Me"],
+    };
     setGame(gameSt);
 
     try {
       // Store the host ID in the database
-      const response = await createHost(id);
-      console.log("Host created successfully:", response.message);
+      const response = await accountCreateGame(id);
+      if (response.err) {
+        console.error("Failed to store Host ID:", response.err);
+      } else {
+        console.log("Host created successfully:", response);
+      }
     } catch (error) {
       console.error("Failed to store Host ID:", error);
     }
@@ -129,38 +154,42 @@ export function peerHost(
     c.on("open", function (data) {
       joinConns.push(c); // add a new connection.
 
-      // increment player count and add the new id
-      gameSt = {
-        ...gameSt,
-        playerCount: gameSt.playerCount + 1,
-        ids: [...gameSt.ids, c.peer],
-      };
-      setGame(gameSt);
-      peerHostSend();
+      // call dbApi function that gets all player usernames
+      accountGameGetUsernames(peer.id).then(function (usernames) {
+        // increment player count and add the new id
+        gameSt = {
+          ...gameSt,
+          playerCount: gameSt.playerCount + 1,
+          usernames: usernames,
+          ids: [...gameSt.ids, c.peer],
+        };
+        setGame(gameSt);
+        peerHostSend();
 
-      // immediately start a call with the connected peer.
-      // call with empty media stream initially, will be replaced when canvas is drawn
-      let call = peer.call(
-        c.peer,
-        canvStream ? canvStream : createEmptyStream()
-      );
-      call.on("stream", function (remoteStream) {
-        addRemoteStream(remoteStream);
+        // immediately start a call with the connected peer.
+        // call with empty media stream initially, will be replaced when canvas is drawn
+        let call = peer.call(
+          c.peer,
+          canvStream ? canvStream : createEmptyStream()
+        );
+        call.on("stream", function (remoteStream) {
+          addRemoteStream(remoteStream);
+        });
+        calls.push(call);
       });
-      calls.push(call);
-    });
 
-    c.on("data", function ({ playerNum: playerNum, message: message }) {
-      // peerMessageSend()'s request ends up here.
-      // now we can process it like how a host's message is processed
-      console.log("received message", message, "from player", playerNum);
+      c.on("data", function ({ playerNum: playerNum, message: message }) {
+        // peerMessageSend()'s request ends up here.
+        // now we can process it like how a host's message is processed
+        console.log("received message", message, "from player", playerNum);
 
-      if (/^react:.{1}$/u.test(message)) {
-        // matches only "react:*" where * is any character including emojis
-        gameReact(message.substring(6));
-      } else {
-        gameGuess(playerNum, message);
-      }
+        if (/^react:.{1}$/u.test(message)) {
+          // matches only "react:*" where * is any character including emojis
+          gameReact(message.substring(6));
+        } else {
+          gameGuess(playerNum, message);
+        }
+      });
     });
   });
 }
@@ -181,7 +210,7 @@ export function peerJoin(
   setGame = setGameState;
   restartTime = restartTimerFunc;
 
-  peer = new Peer();
+  peer = new Peer(customPeerIdGen());
 
   peer.on("open", function (id) {
     console.log("joining peer.", remoteId);
