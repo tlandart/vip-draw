@@ -37,7 +37,7 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "lax",
+      sameSite: "none",
     },
   })
 );
