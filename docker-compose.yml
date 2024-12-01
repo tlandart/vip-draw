@@ -9,23 +9,23 @@ services:
       - "443:443"
     volumes:
       - /var/run/docker.sock:/tmp/docker.sock:ro
-      # - ./certs:/etc/nginx/certs
+      - ./certs:/etc/nginx/certs
       - ./vhost:/etc/nginx/vhost.d
       - ./html:/usr/share/nginx/html
     depends_on:
       - frontend
       - backend
 
-  # reverse proxy let's encrypt companion
-  # nginx-proxy-acme:
-  #   image: nginxproxy/acme-companion
-  #   container_name: nginx-proxy-acme
-  #   restart: always
-  #   volumes_from:
-  #     - nginx-proxy
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock:ro
-  #     - ./acme:/etc/acme.sh
+  reverse proxy let's encrypt companion
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: always
+    volumes_from:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./acme:/etc/acme.sh
 
   # frontend
   frontend:
@@ -34,7 +34,7 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${FRONTEND_DOMAIN}
-      # - LETSENCRYPT_HOST=${FRONTEND_DOMAIN}
+      - LETSENCRYPT_HOST=${FRONTEND_DOMAIN}
 
   # backend
   backend:
@@ -43,7 +43,7 @@ services:
     restart: always
     environment:
       - VIRTUAL_HOST=${BACKEND_DOMAIN}
-      # - LETSENCRYPT_HOST=${BACKEND_DOMAIN}
+      - LETSENCRYPT_HOST=${BACKEND_DOMAIN}
     depends_on:
       - redis
 

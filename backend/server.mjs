@@ -34,7 +34,7 @@ app.use(
     resave: true,
     saveUninitialized: true,
     cookie: {
-      httpOnly: true,
+      // httpOnly: true,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
     },
