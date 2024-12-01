@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
-import VipGame from "../components/VipGame/VipGame";
+import VipGame from "@/components/VipGame/VipGame";
+import VipProfile from "@/components/VipProfile/VipProfile";
 import {
   accountGoogleSignin,
   accountLogout,
@@ -12,7 +13,7 @@ import {
   getSessionId,
   ping,
   accountFollow,
-} from "../api/dbApi";
+} from "@/api/dbApi";
 
 export default function Home() {
   const [profile, setProfile] = useState(null);
@@ -90,6 +91,10 @@ export default function Home() {
     }
   };
 
+  const closeProfile = () => {
+    setShowProfile(false);
+  }
+
   const fetchUserProfile = async () => {
     let profile = await accountFetchProfile();
     if (!profile.err) {
@@ -103,17 +108,6 @@ export default function Home() {
   const handleProfileClick = () => {
     fetchUserProfile();
     setShowProfile(true);
-  };
-
-  const handleUsernameSubmit = async () => {
-    let profile = await accountUsernameSubmit(
-      inputNewUsernameRef.current.value.trim()
-    );
-    if (!profile.err) {
-      setProfile(profile);
-    } else {
-      setError("Failed to update username.");
-    }
   };
 
   const handleFollowSubmit = async () => {
@@ -161,61 +155,9 @@ export default function Home() {
         </div>
 
         {showProfile && (
-          <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
-            <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
-              <button
-                onClick={() => setShowProfile(false)}
-                className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
-              >
-                X
-              </button>
-              <h2 className="text-xl font-bold mb-4">Profile</h2>
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm">
-                    Username: {profile.username}
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="text"
-                    ref={inputNewUsernameRef}
-                    className="w-full p-2 border border-gray-300 rounded mr-2"
-                    placeholder="Enter a new username"
-                  />
-                  <button
-                    onClick={handleUsernameSubmit}
-                    className="bg-blue-500 text-white p-2 rounded"
-                  >
-                    Update
-                  </button>
-                </div>
-              </div>
-              <div className="mb-4">
-                <div className="flex justify-start gap-3">
-                  <label className="block text-sm">
-                    Followers: {profile.followers}
-                  </label>
-                  <label className="block text-sm">
-                    Following: {profile.following}
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex flex-row gap-3 absolute bottom-5">
-                <button
-                  onClick={handleLogout}
-                  className="absolute bg-red-500 text-white p-2 rounded mt-4 mx-auto"
-                >
-                  Log Out
-                </button>
-                <label className="block text-sm">
-                  Personal ID: {profile.personalId}
-                </label>
-              </div>
-            </div>
-          </div>
+          <VipProfile profile={profile} setProfile={setProfile} isMine={true} onLogout={handleLogout} onClose={closeProfile} onError={(e) => setError(e)} />
         )}
+        
         <div className="absolute bottom-20 right-2">
           {isAuthenticated && (
             <button
