@@ -75,8 +75,10 @@ export default function VipGame() {
       if (
         gameState.playerSave >= 0 &&
         gameState.playerSave === playerNum.current
-      )
+      ) {
+        console.log("1. calling canvas save func");
         canvasSaveFunc();
+      }
 
       // console.log("GAME STATE UPDATED", gameStateToString());
     },

@@ -36,19 +36,21 @@ export default function VipCanvas({
   useEffect(function () {
     // set the function
     setCanvasSaveFunc(() => async () => {
-      endCurrentLine();
+      if (currentLine.current.points.length > 0)
+        currentDrawing.current.push(currentLine.current);
+
       if (currentDrawing.current.length > 0) {
-        console.log("saving drawing", currentDrawing.current);
+        console.log("2. saving drawing.", currentDrawing.current);
         const res = await accountGameSaveDrawing(currentDrawing.current);
-        console.log("res:", res);
         if (!res.err) {
-          console.log("saved drawing");
+          console.log("3. saved drawing");
         } else {
-          console.error("Failed to save drawing:", res.err);
+          console.error("3. Failed to save drawing:", res.err);
         }
         resetCanvas(true);
         return;
       } else {
+        console.log("2. not saving empty drawing.");
         resetCanvas(true);
       }
     });
@@ -127,6 +129,7 @@ export default function VipCanvas({
   }
 
   function endCurrentLine() {
+    console.log("end current line:", currentLine.current);
     if (isDrawing) {
       setIsDrawing(false);
       currentDrawing.current.push(currentLine.current);

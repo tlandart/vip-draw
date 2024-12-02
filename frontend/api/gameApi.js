@@ -142,6 +142,8 @@ export function peerHost(
 
     c.on("close", function () {
       console.log("conn closed");
+      peerDisconnect();
+      window.location.reload();
     });
   });
 }
@@ -188,6 +190,7 @@ export function peerJoin(
             call.on("close", function () {
               console.log("call closed");
               peerDisconnect();
+              window.location.reload();
             });
             calls.push(call);
           }
@@ -207,6 +210,7 @@ export function peerJoin(
     hostConn.on("close", function () {
       console.log("conn closed");
       peerDisconnect();
+      window.location.reload();
     });
   });
 
