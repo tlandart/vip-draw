@@ -36,6 +36,7 @@ export default function VipCanvas({
   useEffect(function () {
     // set the function
     setCanvasSaveFunc(() => async () => {
+      endCurrentLine();
       if (currentDrawing.current.length > 0) {
         console.log("saving drawing", currentDrawing.current);
         const res = await accountGameSaveDrawing(currentDrawing.current);

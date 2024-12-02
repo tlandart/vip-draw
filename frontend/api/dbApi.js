@@ -6,6 +6,7 @@ export function getSessionId() {
 
 function deleteCookie(name) {
   // https://stackoverflow.com/a/18367855
+  console.log("process.env.DOMAIN", process.env.DOMAIN);
   document.cookie =
     `${name}=; path=/; domain=${process.env.DOMAIN || "localhost"}; expires=` +
     new Date(0).toUTCString();

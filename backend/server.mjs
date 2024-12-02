@@ -283,6 +283,7 @@ app.post("/create-game", isAuthenticated, async (req, res) => {
     const personalId = await redisClient.get(`sessionId:${sessionId}`);
 
     await redisClient.rPush(`game:${hostId}`, personalId);
+    await redisClient.expire(`game:${hostId}`, 1200);
     console.log(`Host ID ${hostId} stored successfully.`);
     res.status(200).json(`Host ID ${hostId} created successfully.`);
   } catch (err) {

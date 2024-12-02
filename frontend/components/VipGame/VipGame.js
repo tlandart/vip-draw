@@ -185,6 +185,7 @@ export default function VipGame() {
     setGameState({ start: 0, playerCount: 0 }); // Reset game state
 
     playerNum.current = -1;
+    window.location.reload();
   }
 
   // TODO for debugging
