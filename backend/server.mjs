@@ -47,7 +47,7 @@ app.use(
       httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: "none",
-      // domain: process.env.FRONTEND_DOMAIN,
+      domain: process.env.FRONTEND_DOMAIN,
     },
   })
 );
@@ -58,7 +58,7 @@ const cookieArgs = {
   path: "/",
   secure: process.env.COOKIE_SECURE === "true",
   sameSite: "none",
-  // domain: process.env.FRONTEND_DOMAIN,
+  domain: process.env.FRONTEND_DOMAIN,
 };
 
 app.use(function (req, res, next) {
