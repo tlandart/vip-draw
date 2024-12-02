@@ -379,11 +379,13 @@ app.post("/save-drawing", isAuthenticated, async (req, res) => {
 });
 
 app.get("/get-drawing/", isAuthenticated, async (req, res) => {
-  const { personalId, page } = req.query;
+  const { personalId, page: pageStr } = req.query;
 
-  if (!personalId || !page) {
+  if (!personalId || !pageStr) {
     return res.status(400).json("personalId and page are required.");
   }
+
+  let page = parseInt(pageStr);
 
   try {
     const length = await redisClient.lLen(`drawings:${personalId}`);
