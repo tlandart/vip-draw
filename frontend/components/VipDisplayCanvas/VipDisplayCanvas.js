@@ -6,6 +6,7 @@ import { useRef, useEffect, useState } from "react";
 export default function VipDisplayCanvas({ width, height, drawing }) {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
+  const timeouts = useRef([]);
 
   useEffect(function () {
     ctxRef.current = canvasRef.current.getContext("2d");
@@ -20,6 +21,9 @@ export default function VipDisplayCanvas({ width, height, drawing }) {
   );
 
   function resetCanvas() {
+    for (let t of timeouts.current) {
+      clearTimeout(t);
+    }
     ctxRef.current.reset();
     ctxRef.current.fillStyle = "#ffffff"; // bg colour
     ctxRef.current.fillRect(0, 0, width, height);
@@ -37,6 +41,7 @@ export default function VipDisplayCanvas({ width, height, drawing }) {
 
   // draw a full drawing (an array of lines)
   function drawDrawing(lines) {
+    let pointCount = 1;
     for (const line of lines) {
       if (line.points.length === 1) {
         drawLineSegment(
@@ -49,14 +54,19 @@ export default function VipDisplayCanvas({ width, height, drawing }) {
       } else if (line.points.length > 1) {
         let lastPoint = line.points[0];
         for (const point of line.points.slice(1)) {
-          drawLineSegment(
-            lastPoint.x,
-            lastPoint.y,
-            point.x,
-            point.y,
-            line.colour
+          pointCount++;
+          timeouts.current.push(
+            setTimeout(function () {
+              drawLineSegment(
+                lastPoint.x,
+                lastPoint.y,
+                point.x,
+                point.y,
+                line.colour
+              );
+              lastPoint = point;
+            }, Math.floor(pointCount / 2))
           );
-          lastPoint = point;
         }
       }
     }

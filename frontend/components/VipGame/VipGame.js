@@ -177,6 +177,7 @@ export default function VipGame() {
       accountDeleteGame(hostId).catch((err) => {
         console.error("Failed to delete host ID:", err);
       });
+      idLabelRef.current.innerHTML = "";
     }
     peerDisconnect(stream);
 
@@ -300,7 +301,6 @@ export default function VipGame() {
                   setCanvasSaveFunc={setCanvasSaveFunc}
                   width={300}
                   height={300}
-                  lineWidth={5}
                   minDist={3}
                 />
               </div>
