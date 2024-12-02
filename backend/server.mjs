@@ -43,9 +43,11 @@ app.use(
     resave: false,
     saveUninitialized: true,
     cookie: {
+      path: "/",
       httpOnly: false,
-      domain: process.env.FRONTEND_DOMAIN,
-      secure: process.env.COOKIE_SECURE === "true",
+      // domain: process.env.FRONTEND_DOMAIN,
+      // secure: process.env.COOKIE_SECURE === "true",
+      secure: false,
       sameSite: "lax",
     },
   })
@@ -55,7 +57,8 @@ app.use(
 const cookieArgs = {
   maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
   path: "/",
-  secure: process.env.COOKIE_SECURE === "true",
+  // secure: process.env.COOKIE_SECURE === "true",
+  secure: false,
   sameSite: "lax",
 };
 
