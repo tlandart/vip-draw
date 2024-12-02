@@ -40,7 +40,7 @@ app.set("trust proxy", 1);
 app.use(
   session({
     secret: process.env.SECRET_KEY,
-    resave: true,
+    resave: false,
     saveUninitialized: true,
     cookie: {
       httpOnly: false,
@@ -50,6 +50,20 @@ app.use(
     },
   })
 );
+
+console.log(
+  'process.env.COOKIE_SECURE === "true"',
+  process.env.COOKIE_SECURE === "true"
+);
+console.log("process.env.FRONTEND_DOMAIN", process.env.FRONTEND_DOMAIN);
+console.log("process.env.SECRET_KEY", process.env.SECRET_KEY);
+
+const cookieArgs = {
+  maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+  path: "/",
+  secure: process.env.COOKIE_SECURE === "true",
+  sameSite: true,
+};
 
 app.use(function (req, res, next) {
   console.log("Request", req.method, req.url, req.body);
@@ -118,13 +132,7 @@ app.post("/api/signup", async (req, res) => {
     req.session.draw_session_id = sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", sessionId, cookieArgs)
     );
     res.status(200).json(user);
   } catch (error) {
@@ -158,13 +166,7 @@ app.post("/api/signin", async (req, res) => {
     req.session.draw_session_id = existingUser.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", existingUser.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", existingUser.sessionId, cookieArgs)
     );
     res.status(200).json(existingUser);
   } catch (error) {
@@ -220,13 +222,7 @@ app.post("/api/google-login", async (req, res) => {
     req.session.draw_session_id = user.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", user.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", user.sessionId, cookieArgs)
     );
     res.status(200).json(user);
   } catch (err) {
