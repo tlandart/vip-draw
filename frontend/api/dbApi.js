@@ -1,6 +1,6 @@
 export function getSessionId() {
   // https://stackoverflow.com/a/21125098
-  var match = document.cookie.match(new RegExp("(^| )session_id=([^;]+)"));
+  var match = document.cookie.match(new RegExp("(^| )draw_session_id=([^;]+)"));
   if (match) return match[2];
 }
 

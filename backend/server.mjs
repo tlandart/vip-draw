@@ -72,8 +72,8 @@ app.get("/api/ping", (req, res) => {
 });
 
 const isAuthenticated = function (req, res, next) {
-  console.log("req.session.session_id is", req.session.session_id);
-  if (!req.session.session_id) return res.status(401).end("access denied");
+  console.log("req.session.draw_session_id is", req.session.draw_session_id);
+  if (!req.session.draw_session_id) return res.status(401).end("access denied");
   next();
 };
 
@@ -110,10 +110,10 @@ app.post("/api/signup", async (req, res) => {
     await redisClient.set(`email:${email}`, personalId);
     await redisClient.set(`sessionId:${sessionId}`, personalId);
     // start a session
-    req.session.session_id = sessionId;
+    req.session.draw_session_id = sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", sessionId, {
+      serialize("draw_session_id", sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
@@ -149,10 +149,10 @@ app.post("/api/signin", async (req, res) => {
     }
 
     // start a session
-    req.session.session_id = existingUser.sessionId;
+    req.session.draw_session_id = existingUser.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", existingUser.sessionId, {
+      serialize("draw_session_id", existingUser.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
@@ -210,10 +210,10 @@ app.post("/api/google-login", async (req, res) => {
     }
 
     // start a session
-    req.session.session_id = user.sessionId;
+    req.session.draw_session_id = user.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", user.sessionId, {
+      serialize("draw_session_id", user.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
@@ -232,7 +232,7 @@ app.post("/api/logout", isAuthenticated, (req, res) => {
     if (err) {
       return res.status(500).json("Failed to log out");
     }
-    res.clearCookie("session_id");
+    res.clearCookie("draw_session_id");
     res.status(200).json("Logged out successfully");
   });
 });
@@ -243,8 +243,8 @@ app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
 
   // ensure it is really the user
   console.log("sessionId:", sessionId);
-  console.log("req.session.session_id:", req.session.session_id);
-  if (sessionId !== req.session.session_id)
+  console.log("req.session.draw_session_id:", req.session.draw_session_id);
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   console.log(`Attempting to retrieve Host ID: ${hostId}`);
@@ -276,7 +276,7 @@ app.post("/create-game", isAuthenticated, async (req, res) => {
     return res.status(400).json("Session ID and Host ID is required.");
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   try {
@@ -299,7 +299,7 @@ app.delete("/delete-game/:hostId", isAuthenticated, async (req, res) => {
     return res.status(400).json("Session ID and Host ID is required.");
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   try {
@@ -338,7 +338,7 @@ app.get("/game-usernames", isAuthenticated, async (req, res) => {
     return res.status(400).json("Session ID and Host ID is required.");
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   try {
@@ -417,7 +417,7 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
   }
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const personalId = await redisClient.get(`sessionId:${sessionId}`);
@@ -448,7 +448,7 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
   }
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
@@ -498,7 +498,7 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
   }
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
