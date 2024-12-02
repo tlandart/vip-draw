@@ -46,8 +46,8 @@ app.use(
       path: "/",
       httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: "lax",
-      domain: process.env.FRONTEND_DOMAIN,
+      sameSite: "none",
+      // domain: process.env.FRONTEND_DOMAIN,
     },
   })
 );
@@ -57,8 +57,8 @@ const cookieArgs = {
   maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
   path: "/",
   secure: process.env.COOKIE_SECURE === "true",
-  sameSite: "lax",
-  domain: process.env.FRONTEND_DOMAIN,
+  sameSite: "none",
+  // domain: process.env.FRONTEND_DOMAIN,
 };
 
 app.use(function (req, res, next) {
