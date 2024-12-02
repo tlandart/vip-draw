@@ -58,6 +58,8 @@ export default function Home() {
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
+        setProfile(null);
+        setIsAuthenticated(false);
         setError(
           profile.err ||
             (isSignUp ? "Failed to create account" : "Failed to sign in")
@@ -79,6 +81,9 @@ export default function Home() {
 
   const handleGoogleLoginFailure = (error) => {
     console.error("Google login error:", error);
+    setProfile(null);
+    setIsAuthenticated(false);
+    setShowProfile(false);
     setError("Google login failed");
   };
 
@@ -89,6 +94,9 @@ export default function Home() {
       setIsAuthenticated(false);
       setShowProfile(false);
     } else {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
       setError("Failed to log out");
     }
   };
@@ -108,6 +116,9 @@ export default function Home() {
       setProfile(profile);
       setIsAuthenticated(true);
     } else {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
       setError("Error fetching user profile.");
     }
   };
@@ -119,6 +130,7 @@ export default function Home() {
       setShowFindPanel(false);
       setOtherProfile(otherProfile);
     } else {
+      setOtherProfile(null);
       setError("Error fetching other user profile.");
     }
   };
@@ -131,6 +143,22 @@ export default function Home() {
   const handleOtherProfileClick = (e) => {
     e.preventDefault();
     fetchOtherUserProfile(inputFindRef.current.value.trim());
+  };
+
+  const handleUserClickMine = (user) => {
+    if (user.personalId !== profile.personalId) {
+      setOtherProfile(user);
+      setShowProfile(false);
+    }
+  };
+
+  const handleUserClickOther = (user) => {
+    if (user.personalId === profile.personalId) {
+      setOtherProfile(null);
+      setShowProfile(true);
+    } else {
+      setOtherProfile(user);
+    }
   };
 
   const handleFollowSubmit = async () => {
@@ -157,38 +185,46 @@ export default function Home() {
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
       {/* <button onClick={() => handlePing()}>PING</button> */}
       <div className="relative h-screen w-full">
-        <div className="absolute top-20 right-2">
-          {isAuthenticated ? (
-            <button
-              onClick={handleProfileClick}
-              className="bg-blue-500 text-white p-2 rounded"
-            >
-              Open Profile
-            </button>
-          ) : (
+        {isAuthenticated ? (
+          <button
+            onClick={handleProfileClick}
+            className="bg-blue-500 text-white p-2 rounded absolute top-20 right-2"
+          >
+            Open Profile
+          </button>
+        ) : (
+          <div>
+            <h1 className="page-title">VIP Draw!</h1>
+            <p className="text-3xl text-center mt-32">
+              Create your account now!
+            </p>
             <button
               onClick={() => {
                 setShowForm(!showForm);
                 setIsSignUp(false);
               }}
-              className="bg-blue-500 text-white p-2 rounded"
+              className="bg-blue-500 text-white p-2 rounded absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             >
               Sign In
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {showProfile && (
+        {showProfile && profile && (
           <VipProfile
             theirProfile={profile}
             setTheirProfile={setProfile}
             isMine={true}
             onLogout={handleLogout}
             onClose={closeProfile}
-            onError={(e) => setError(e)}
+            onError={(e) => {
+              setProfile(null);
+              setIsAuthenticated(false);
+              setError(e);
+            }}
+            onUserClick={handleUserClickMine}
           />
         )}
-
         {otherProfile && (
           <VipProfile
             myProfile={profile}
@@ -197,10 +233,14 @@ export default function Home() {
             setTheirProfile={setOtherProfile}
             isMine={false}
             onClose={closeOtherProfile}
-            onError={(e) => setError(e)}
+            onError={(e) => {
+              setOtherProfile(null);
+              setError(e);
+            }}
+            onUserClick={handleUserClickOther}
           />
         )}
-        <div className="absolute bottom-20 right-2">
+        <div className="absolute bottom-2 right-2">
           {isAuthenticated && (
             <button
               onClick={() => setShowFindPanel(true)}
@@ -240,7 +280,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
         {showForm && !isAuthenticated && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">
             <h2 className="text-xl mb-4">
@@ -303,7 +342,6 @@ export default function Home() {
             </button>
           </div>
         )}
-
         {isAuthenticated && <VipGame />}
       </div>
     </GoogleOAuthProvider>

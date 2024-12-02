@@ -2,6 +2,7 @@ import {
   accountUsernameSubmit,
   accountFollowUnfollow,
   accountGetDrawings,
+  accountGetFollowersFollowing,
 } from "@/api/dbApi";
 import VipDisplayCanvas from "../VipDisplayCanvas/VipDisplayCanvas";
 import { useRef, useState, useEffect } from "react";
@@ -16,6 +17,7 @@ import { useRef, useState, useEffect } from "react";
     - onLogout: function to log out of account, OPTIONAL
     - onClose: function to close this component
     - onError: function to set error text at a higher level
+    - onUserClick: function to call when a user the follower/following list is clicked
 */
 
 export default function VipProfile({
@@ -26,6 +28,7 @@ export default function VipProfile({
   onClose,
   onLogout,
   onError,
+  onUserClick,
 }) {
   const inputNewUsernameRef = useRef();
 
@@ -33,6 +36,11 @@ export default function VipProfile({
   const [drawings, setDrawings] = useState(null);
   const [drawingsPage, setDrawingsPage] = useState(0);
   const [end, setEnd] = useState(false);
+
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
 
   useEffect(
     function () {
@@ -47,6 +55,28 @@ export default function VipProfile({
       });
     },
     [theirProfile, drawingsPage]
+  );
+
+  useEffect(
+    function () {
+      if (showFollowers) {
+        accountGetFollowersFollowing("followers", theirProfile.personalId).then(
+          (res) => {
+            if (!res.err) setFollowers(res);
+            else console.error("Failed to get followers:", res.err);
+          }
+        );
+      }
+      if (showFollowing) {
+        accountGetFollowersFollowing("following", theirProfile.personalId).then(
+          (res) => {
+            if (!res.err) setFollowing(res);
+            else console.error("Failed to get following:", res.err);
+          }
+        );
+      }
+    },
+    [showFollowers, showFollowing]
   );
 
   const handlePrev = () => {
@@ -76,6 +106,16 @@ export default function VipProfile({
     } else {
       onError("Failed to follow/unfollow.");
     }
+  };
+
+  const toggleFollowers = () => {
+    setShowFollowing(false);
+    setShowFollowers(!showFollowers);
+  };
+
+  const toggleFollowing = () => {
+    setShowFollowers(false);
+    setShowFollowing(!showFollowing);
   };
 
   return (
@@ -112,7 +152,7 @@ export default function VipProfile({
           )}
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm">
+              <label className="block text-3xl">
                 Username: {theirProfile.username}
               </label>
             </div>
@@ -122,8 +162,10 @@ export default function VipProfile({
                 onSubmit={handleUsernameSubmit}
               >
                 <input
+                  maxLength={15}
                   type="text"
                   ref={inputNewUsernameRef}
+                  required
                   className="w-full p-2 border border-gray-300 rounded mr-2"
                   placeholder="Enter a new username"
                 />
@@ -139,13 +181,83 @@ export default function VipProfile({
 
           <div className="mb-4">
             <div className="flex justify-start gap-3">
-              <label className="block text-sm">
+              <button onClick={toggleFollowers} className="block text-sm">
                 Followers: {theirProfile.followers}
-              </label>
-              <label className="block text-sm">
+              </button>
+              <button onClick={toggleFollowing} className="block text-sm">
                 Following: {theirProfile.following}
-              </label>
+              </button>
             </div>
+
+            {showFollowers && (
+              <div className="fixed inset-0 flex item-center justify-center z-50">
+                <div
+                  className="absolute inset-0 bg-black opacity-50"
+                  onClick={toggleFollowers}
+                ></div>
+                <div className="relative z-10 w-1/3 max-h-[50%] overflow-y-auto bg-gray-100 p-6 rounded-lg shadow-lg mt-auto mb-auto">
+                  <div className="flex item-center justify-center">
+                    <h2 className="text-lg font-bold">Followers</h2>
+                    <button
+                      className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
+                      onClick={toggleFollowers}
+                    >
+                      X
+                    </button>
+                  </div>
+                  <ul>
+                    {followers.length > 0 &&
+                      followers.map((user, index) => (
+                        <li
+                          className="hover:bg-white cursor-pointer duration-300 pt-1 pb-1"
+                          key={index}
+                          onClick={() => {
+                            onUserClick(user);
+                            toggleFollowers();
+                          }}
+                        >
+                          {user.username}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
+            )}
+
+            {showFollowing && (
+              <div className="fixed inset-0 flex item-center justify-center z-50">
+                <div
+                  className="absolute inset-0 bg-black opacity-50"
+                  onClick={toggleFollowing}
+                ></div>
+                <div className="relative z-10 w-1/3 max-h-[50%] overflow-y-auto bg-gray-100 p-6 rounded-lg shadow-lg mt-auto mb-auto">
+                  <div className="flex item-center justify-center">
+                    <h2 className="text-lg font-bold">Following</h2>
+                    <button
+                      className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
+                      onClick={toggleFollowing}
+                    >
+                      X
+                    </button>
+                  </div>
+                  <ul>
+                    {following.length > 0 &&
+                      following.map((user, index) => (
+                        <li
+                          className="hover:bg-white cursor-pointer duration-300 pt-1 pb-1"
+                          key={index}
+                          onClick={() => {
+                            onUserClick(user);
+                            toggleFollowing();
+                          }}
+                        >
+                          {user.username}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
 
           {drawings && (
@@ -186,6 +298,9 @@ export default function VipProfile({
           )}
 
           <div className="flex flex-row gap-3 absolute left-2 bottom-12">
+            <label className="block text-sm">
+              Personal ID: {theirProfile.personalId}
+            </label>
             {!myProfile && (
               <button
                 onClick={onLogout}
@@ -194,9 +309,6 @@ export default function VipProfile({
                 Log Out
               </button>
             )}
-            <label className="block text-sm">
-              Personal ID: {theirProfile.personalId}
-            </label>
           </div>
         </div>
       )}

@@ -35,19 +35,21 @@ export default function VipCanvas({
 
   useEffect(function () {
     // set the function
-    setCanvasSaveFunc(() => () => {
-      // TODO save drawing to db
-      console.log("saving drawing", currentDrawing.current);
-
-      accountGameSaveDrawing(currentDrawing.current).then((res) => {
+    setCanvasSaveFunc(() => async () => {
+      if (currentDrawing.current.length > 0) {
+        console.log("saving drawing", currentDrawing.current);
+        const res = await accountGameSaveDrawing(currentDrawing.current);
+        console.log("res:", res);
         if (!res.err) {
           console.log("saved drawing");
         } else {
           console.error("Failed to save drawing:", res.err);
         }
-      });
-
-      resetCanvas(true);
+        resetCanvas(true);
+        return;
+      } else {
+        resetCanvas(true);
+      }
     });
 
     setStream(canvasRef.current.captureStream(30));
@@ -64,6 +66,7 @@ export default function VipCanvas({
   );
 
   function resetCanvas(deleteStoredDrawing = false) {
+    console.log("resetting canvas");
     if (deleteStoredDrawing) {
       currentLine.current = { colour: colour, points: [] };
       currentDrawing.current = [];

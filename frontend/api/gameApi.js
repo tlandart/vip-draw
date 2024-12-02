@@ -153,6 +153,10 @@ export function peerHost(
         }
       });
     });
+
+    c.on("close", function () {
+      console.log("conn closed");
+    });
   });
 }
 
@@ -195,6 +199,10 @@ export function peerJoin(
               // append new stream
               addRemoteStream(remoteStream);
             });
+            call.on("close", function () {
+              console.log("call closed");
+              peerDisconnect();
+            });
             calls.push(call);
           }
         }
@@ -205,9 +213,14 @@ export function peerJoin(
       setGame(gameState);
 
       // if the new gameState is back to original, reset our gameState.
-      if (gameSt.start === 0) {
-        peerDisconnect(canvStream);
-      }
+      // if (gameSt.start === 0) {
+      //   peerDisconnect();
+      // }
+    });
+
+    hostConn.on("close", function () {
+      console.log("conn closed");
+      peerDisconnect();
     });
   });
 
@@ -266,13 +279,15 @@ export function peerUpdateStream(stream) {
   }
 }
 
-export function peerDisconnect(stream) {
+export function peerDisconnect() {
   console.log("Disconnecting...");
 
   // Reset the game state to initial state
+  let sendFlag = false;
+  if (gameSt.playerNum === 0) sendFlag = true;
   gameSt = { start: 0 };
   setGame(gameSt);
-  peerHostSend();
+  if (sendFlag) peerHostSend();
 
   // Close all remote connections
   for (const conn of joinConns) {
@@ -307,10 +322,12 @@ export function peerDisconnect(stream) {
   }
 
   // Stop media stream tracks
-  if (stream && stream.getTracks) {
+  if (canvStream && canvStream.getTracks) {
     console.log("Stopping stream...");
-    stream.getTracks().forEach((track) => track.stop());
+    canvStream.getTracks().forEach((track) => track.stop());
   }
+
+  canvStream = null;
 }
 
 ////////////////////////////////////////////////////////////////////////////
