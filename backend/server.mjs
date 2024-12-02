@@ -46,6 +46,11 @@ app.use(
   })
 );
 
+app.use(function (req, res, next) {
+  console.log("Request", req.method, req.url, req.body);
+  next();
+});
+
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST}:6379`,
 });
