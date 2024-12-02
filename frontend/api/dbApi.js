@@ -1,6 +1,6 @@
 export function getSessionId() {
   // https://stackoverflow.com/a/21125098
-  var match = document.cookie.match(new RegExp("(^| )session_id=([^;]+)"));
+  var match = document.cookie.match(new RegExp("(^| )draw_session_id=([^;]+)"));
   if (match) return match[2];
 }
 
@@ -62,9 +62,12 @@ export async function accountLogout() {
   }).then(handleResponse);
 }
 
-export async function accountFetchProfile() {
+export async function accountFetchProfile(personalId = null) {
   return fetch(
-    `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile/${getSessionId()}`,
+    `${process.env.NEXT_PUBLIC_BACKEND}/api/get-profile?${new URLSearchParams({
+      sessionId: getSessionId(),
+      personalId: personalId,
+    })}`,
     {
       method: "GET",
       headers: {
@@ -89,8 +92,10 @@ export async function accountUsernameSubmit(newUsername) {
   }).then(handleResponse);
 }
 
-export async function accountFollow(followPersonalId) {
-  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/follow`, {
+export async function accountFollowUnfollow(action, followPersonalId) {
+  if (!["follow", "unfollow"].includes(action))
+    return { err: "Invalid action." };
+  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/${action}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -135,6 +140,29 @@ export async function accountGameGetUsernames(hostId) {
     `${process.env.NEXT_PUBLIC_BACKEND}/game-usernames?${new URLSearchParams({
       hostId: hostId,
       sessionId: getSessionId(),
+    })}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    }
+  ).then(handleResponse);
+}
+
+export async function accountGameSaveDrawing(drawing) {
+  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/save-drawing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: getSessionId(), drawing: drawing }),
+    credentials: "include",
+  }).then(handleResponse);
+}
+
+export async function accountGetDrawings(personalId, page) {
+  return fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND}/get-drawing?${new URLSearchParams({
+      personalId: personalId,
+      page: page,
     })}`,
     {
       method: "GET",

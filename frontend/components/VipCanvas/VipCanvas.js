@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState } from "react";
+import { accountGameSaveDrawing } from "@/api/dbApi";
 
 /* A Canvas component that can be drawn on with the mouse, with undo and reset buttons.
     - canvasRef: will be set to a reference to the pure html canvas
     - setStream: function to set our outgoing stream of the canvas
     - setCanvasSaveFunc: function to set a function that saves and resets the canvas
     - width/height: width/height of canvas
-    - lineWidth: width of drawing line
     - minDist: minimum length of line strokes in the drawing
 */
 
@@ -15,7 +15,6 @@ export default function VipCanvas({
   setCanvasSaveFunc,
   width,
   height,
-  lineWidth,
   minDist,
 }) {
   const canvasRef = useRef(null);
@@ -24,6 +23,7 @@ export default function VipCanvas({
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [colour, setColour] = useState("#000000");
+  const [lineWidth, setLineWidth] = useState(5);
 
   // a line is an object with:
   // colour: the colour of the line (a string like "#FF00AA")
@@ -37,8 +37,16 @@ export default function VipCanvas({
     // set the function
     setCanvasSaveFunc(() => () => {
       // TODO save drawing to db
-      console.log("saving to db", currentDrawing.current);
-      // we don't actually need to reset canvas because it is re-rendered anyway
+      console.log("saving drawing", currentDrawing.current);
+
+      accountGameSaveDrawing(currentDrawing.current).then((res) => {
+        if (!res.err) {
+          console.log("saved drawing");
+        } else {
+          console.error("Failed to save drawing:", res.err);
+        }
+      });
+
       resetCanvas(true);
     });
 
@@ -47,6 +55,13 @@ export default function VipCanvas({
     ctxRef.current = canvasRef.current.getContext("2d");
     resetCanvas(true);
   }, []);
+
+  useEffect(
+    function () {
+      ctxRef.current.lineWidth = lineWidth;
+    },
+    [lineWidth]
+  );
 
   function resetCanvas(deleteStoredDrawing = false) {
     if (deleteStoredDrawing) {
@@ -153,6 +168,14 @@ export default function VipCanvas({
     ctxRef.current.strokeStyle = newColour;
   }
 
+  function increasePenSize() {
+    setLineWidth((prev) => prev + 1);
+  }
+
+  function decreasePenSize() {
+    setLineWidth((prev) => (prev > 1 ? prev - 1 : 1));
+  }
+
   return (
     <div className={className}>
       <div className="flex justify-center">
@@ -217,6 +240,14 @@ export default function VipCanvas({
           [Undo]
         </button>
       </div>
+      {/* <div className="flex gap-2 mt-3">
+        <button onClick={increasePenSize} className="px-4 py-2 rounded">
+          Increase Size
+        </button>
+        <button onClick={decreasePenSize} className="px-4 py-2 rounded">
+          Decrease Size
+        </button>
+      </div> */}
     </div>
   );
 }

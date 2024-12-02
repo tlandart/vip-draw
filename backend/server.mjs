@@ -5,11 +5,15 @@ import { OAuth2Client } from "google-auth-library";
 import session from "express-session";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-import { createServer } from "http";
+// import * as https from "https";
+import * as http from "http";
+// import { createServer } from "http";
 import { parse, serialize } from "cookie";
 
 const app = express();
 const PORT = 4000;
+
+const DRAWINGS_PER_PAGE = 3;
 
 const CLIENT_ID =
   "821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com";
@@ -28,18 +32,26 @@ app.use((req, res, next) => {
   next();
 });
 
+app.set("trust proxy", 1);
+
 app.use(
   session({
     secret: process.env.SECRET_KEY,
     resave: true,
     saveUninitialized: true,
     cookie: {
-      httpOnly: true,
+      httpOnly: false,
+      domain: process.env.FRONTEND_DOMAIN,
       secure: process.env.COOKIE_SECURE === "true",
-      sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
+      sameSite: "lax",
     },
   })
 );
+
+app.use(function (req, res, next) {
+  console.log("Request", req.method, req.url, req.body);
+  next();
+});
 
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST}:6379`,
@@ -62,130 +74,10 @@ app.get("/api/ping", (req, res) => {
 });
 
 const isAuthenticated = function (req, res, next) {
-  console.log("req.session.session_id is", req.session.session_id);
-  if (!req.session.session_id) return res.status(401).end("access denied");
+  console.log("req.session.draw_session_id is", req.session.draw_session_id);
+  if (!req.session.draw_session_id) return res.status(401).end("access denied");
   next();
 };
-
-app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
-  const { hostId } = req.params;
-  const { sessionId } = req.body;
-
-  // ensure it is really the user
-  console.log("sessionId:", sessionId);
-  console.log("req.session.session_id:", req.session.session_id);
-  if (sessionId !== req.session.session_id)
-    return res.status(403).end("forbidden");
-
-  console.log(`Attempting to retrieve Host ID: ${hostId}`);
-
-  try {
-    const reply = await redisClient.lRange(`game:${hostId}`, 0, 0);
-    if (reply) {
-      console.log(`Host ID found: ${hostId}`);
-
-      const personalId = await redisClient.get(`sessionId:${sessionId}`);
-
-      await redisClient.rPush(`game:${hostId}`, personalId);
-
-      res.status(200).json(`Host ID ${hostId} is active.`);
-    } else {
-      console.error(`Host ID not found in Redis: ${hostId}`);
-      res.status(404).json(`Host ID ${hostId} not found.`);
-    }
-  } catch (err) {
-    console.error("Error retrieving Host ID:", err);
-    res.status(500).json("Failed to retrieve Host ID.");
-  }
-});
-
-app.post("/create-game", isAuthenticated, async (req, res) => {
-  const { sessionId, hostId } = req.body;
-
-  if (!sessionId || !hostId)
-    return res.status(400).json("Session ID and Host ID is required.");
-
-  // ensure it is really the user
-  if (sessionId !== req.session.session_id)
-    return res.status(403).end("forbidden");
-
-  try {
-    const personalId = await redisClient.get(`sessionId:${sessionId}`);
-
-    await redisClient.rPush(`game:${hostId}`, personalId);
-    console.log(`Host ID ${hostId} stored successfully.`);
-    res.status(200).json(`Host ID ${hostId} created successfully.`);
-  } catch (err) {
-    console.error("Error storing Host ID:", err);
-    res.status(500).json("Failed to store Host ID.");
-  }
-});
-
-app.delete("/delete-game/:hostId", isAuthenticated, async (req, res) => {
-  const { hostId } = req.params;
-  const { sessionId } = req.body;
-
-  if (!sessionId || !hostId)
-    return res.status(400).json("Session ID and Host ID is required.");
-
-  // ensure it is really the user
-  if (sessionId !== req.session.session_id)
-    return res.status(403).end("forbidden");
-
-  try {
-    const personalId = await redisClient.get(`sessionId:${sessionId}`);
-    const hostPersonalId = await redisClient.lIndex(`game:${hostId}`, 0, 0);
-
-    // ensure it is the host
-    if (personalId !== hostPersonalId) return res.status(403).end("forbidden");
-
-    console.log(`Attempting to delete Host ID: ${hostId}`);
-
-    redisClient.del(`game:${hostId}`, (err, reply) => {
-      if (err) {
-        console.error("Error deleting Host ID from Redis:", err);
-        return res.status(500).json("Internal Server Error");
-      }
-
-      if (reply === 1) {
-        console.log(`Successfully deleted Host ID: ${hostId}`);
-        res.status(200).json("Host ID deleted");
-      } else {
-        console.error(`Host ID not found in Redis: ${hostId}`);
-        res.status(404).json("Host ID not found");
-      }
-    });
-  } catch (err) {
-    console.error("Error deleting Host ID:", err);
-    res.status(500).json("Failed to delete Host ID.");
-  }
-});
-
-app.get("/game-usernames", isAuthenticated, async (req, res) => {
-  const { sessionId, hostId } = req.query;
-
-  if (!sessionId || !hostId)
-    return res.status(400).json("Session ID and Host ID is required.");
-
-  // ensure it is really the user
-  if (sessionId !== req.session.session_id)
-    return res.status(403).end("forbidden");
-
-  try {
-    const personalIds = await redisClient.lRange(`game:${hostId}`, 0, -1);
-    let usernames = [];
-
-    // get usernames from each personalId
-    for (const id of personalIds) {
-      usernames.push(await redisClient.hGet(`user:${id}`, "username"));
-    }
-
-    res.status(200).json(usernames);
-  } catch (err) {
-    console.error("Error getting usernames from Host ID:", err);
-    res.status(500).json("Failed to get usernames from Host ID.");
-  }
-});
 
 app.post("/api/signup", async (req, res) => {
   const { email, password } = req.body;
@@ -220,13 +112,15 @@ app.post("/api/signup", async (req, res) => {
     await redisClient.set(`email:${email}`, personalId);
     await redisClient.set(`sessionId:${sessionId}`, personalId);
     // start a session
-    req.session.session_id = sessionId;
+    req.session.draw_session_id = sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", sessionId, {
-        path: "/",
+      serialize("draw_session_id", sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        credentials: true,
+        path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
+        secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(user);
@@ -258,12 +152,15 @@ app.post("/api/signin", async (req, res) => {
     }
 
     // start a session
-    req.session.session_id = existingUser.sessionId;
+    req.session.draw_session_id = existingUser.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", existingUser.sessionId, {
-        path: "/",
+      serialize("draw_session_id", existingUser.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
+        secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(existingUser);
@@ -317,12 +214,15 @@ app.post("/api/google-login", async (req, res) => {
     }
 
     // start a session
-    req.session.session_id = user.sessionId;
+    req.session.draw_session_id = user.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("session_id", user.sessionId, {
-        path: "/",
+      serialize("draw_session_id", user.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
+        secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(user);
@@ -337,21 +237,224 @@ app.post("/api/logout", isAuthenticated, (req, res) => {
     if (err) {
       return res.status(500).json("Failed to log out");
     }
-    res.clearCookie("session_id");
+    res.clearCookie("draw_session_id");
     res.status(200).json("Logged out successfully");
   });
 });
 
-app.get("/api/get-profile/:sessionId", async (req, res) => {
-  const { sessionId } = req.params;
+app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
+  const { hostId } = req.params;
+  const { sessionId } = req.body;
+
+  // ensure it is really the user
+  console.log("sessionId:", sessionId);
+  console.log("req.session.draw_session_id:", req.session.draw_session_id);
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
+
+  console.log(`Attempting to retrieve Host ID: ${hostId}`);
+
+  try {
+    const reply = await redisClient.lRange(`game:${hostId}`, 0, 0);
+    if (Object.keys(reply).length > 0) {
+      console.log(`Host ID found: ${hostId}`);
+
+      const personalId = await redisClient.get(`sessionId:${sessionId}`);
+
+      await redisClient.rPush(`game:${hostId}`, personalId);
+
+      res.status(200).json(`Host ID ${hostId} is active.`);
+    } else {
+      console.error(`Host ID not found in Redis: ${hostId}`);
+      res.status(404).json(`Host ID ${hostId} not found.`);
+    }
+  } catch (err) {
+    console.error("Error retrieving Host ID:", err);
+    res.status(500).json("Failed to retrieve Host ID.");
+  }
+});
+
+app.post("/create-game", isAuthenticated, async (req, res) => {
+  const { sessionId, hostId } = req.body;
+
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
+
+  // ensure it is really the user
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
+
+  try {
+    const personalId = await redisClient.get(`sessionId:${sessionId}`);
+
+    await redisClient.rPush(`game:${hostId}`, personalId);
+    console.log(`Host ID ${hostId} stored successfully.`);
+    res.status(200).json(`Host ID ${hostId} created successfully.`);
+  } catch (err) {
+    console.error("Error storing Host ID:", err);
+    res.status(500).json("Failed to store Host ID.");
+  }
+});
+
+app.delete("/delete-game/:hostId", isAuthenticated, async (req, res) => {
+  const { hostId } = req.params;
+  const { sessionId } = req.body;
+
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
+
+  // ensure it is really the user
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
+
+  try {
+    const personalId = await redisClient.get(`sessionId:${sessionId}`);
+    const hostPersonalId = await redisClient.lIndex(`game:${hostId}`, 0, 0);
+
+    // ensure it is the host
+    if (personalId !== hostPersonalId) return res.status(403).end("forbidden");
+
+    console.log(`Attempting to delete Host ID: ${hostId}`);
+
+    redisClient.del(`game:${hostId}`, (err, reply) => {
+      if (err) {
+        console.error("Error deleting Host ID from Redis:", err);
+        return res.status(500).json("Internal Server Error");
+      }
+
+      if (reply === 1) {
+        console.log(`Successfully deleted Host ID: ${hostId}`);
+        res.status(200).json("Host ID deleted");
+      } else {
+        console.error(`Host ID not found in Redis: ${hostId}`);
+        res.status(404).json("Host ID not found");
+      }
+    });
+  } catch (err) {
+    console.error("Error deleting Host ID:", err);
+    res.status(500).json("Failed to delete Host ID.");
+  }
+});
+
+app.get("/game-usernames", isAuthenticated, async (req, res) => {
+  const { sessionId, hostId } = req.query;
+
+  if (!sessionId || !hostId)
+    return res.status(400).json("Session ID and Host ID is required.");
+
+  // ensure it is really the user
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
+
+  try {
+    const personalIds = await redisClient.lRange(`game:${hostId}`, 0, -1);
+    let usernames = [];
+
+    // get usernames from each personalId
+    for (const id of personalIds) {
+      usernames.push(await redisClient.hGet(`user:${id}`, "username"));
+    }
+
+    res.status(200).json(usernames);
+  } catch (err) {
+    console.error("Error getting usernames from Host ID:", err);
+    res.status(500).json("Failed to get usernames from Host ID.");
+  }
+});
+
+app.post("/save-drawing", isAuthenticated, async (req, res) => {
+  const { sessionId, drawing } = req.body;
+
+  if (!sessionId || !drawing || drawing.length <= 0) {
+    return res.status(400).json("sessionId and drawing are required.");
+  }
+
+  // ensure it is really the user
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
 
   const personalId = await redisClient.get(`sessionId:${sessionId}`);
 
   try {
-    const userProfile = await redisClient.hGetAll(`user:${personalId}`);
+    await redisClient.lPush(`drawings:${personalId}`, JSON.stringify(drawing));
+    res.status(200);
+  } catch (error) {
+    console.error("Error saving drawing:", error);
+    res.status(500).json("Failed to save drawing.");
+  }
+});
+
+app.get("/get-drawing/", isAuthenticated, async (req, res) => {
+  const { personalId, page } = req.query;
+
+  if (!personalId || !page) {
+    return res.status(400).json("personalId and page are required.");
+  }
+
+  try {
+    const length = await redisClient.lLen(`drawings:${personalId}`);
+    if (page * DRAWINGS_PER_PAGE > length || page < 0)
+      return res.status(400).json("page index out of bounds.");
+
+    const drawings = await redisClient.lRange(
+      `drawings:${personalId}`,
+      page * DRAWINGS_PER_PAGE,
+      page * DRAWINGS_PER_PAGE + DRAWINGS_PER_PAGE - 1
+    );
+
+    res.status(200).json({
+      drawings: drawings,
+      end: (page + 1) * DRAWINGS_PER_PAGE > length,
+    });
+  } catch (error) {
+    console.error("Error getting drawings:", error);
+    res.status(500).json("Failed to get drawings.");
+  }
+});
+
+app.get("/api/get-profile/", async (req, res) => {
+  const { sessionId, personalId } = req.query;
+
+  let myPersonalId, theirPersonalId;
+
+  if ((!personalId || personalId === "null") && !sessionId)
+    return res.status(400).json("Session ID or personalId is required.");
+  else if (!personalId || personalId === "null") {
+    // if personalId is null, get their own profile from sessionid
+    const a = await redisClient.get(`sessionId:${sessionId}`);
+    myPersonalId = a;
+    theirPersonalId = a;
+  } else if (!sessionId) {
+    // if sessionId is null, get their profile
+    theirPersonalId = personalId;
+  } else {
+    // if both are present, find their profile while checking if ours follows it
+    myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
+    theirPersonalId = personalId;
+  }
+
+  try {
+    let userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
     if (Object.keys(userProfile).length === 0) {
       return res.status(404).json("User not found.");
+    }
+
+    // if the user that called this (sessionId) is following personalId
+    // (which could be themselves, in which case this means nothing),
+    // flag it in the returned object
+    userProfile.isFollowing = false;
+    if (myPersonalId) {
+      const personalIds = await redisClient.lRange(
+        `following:${myPersonalId}`,
+        0,
+        -1
+      );
+      for (const id of personalIds) {
+        if (id == theirPersonalId) {
+          userProfile.isFollowing = true;
+        }
+      }
     }
 
     res.status(200).json(userProfile);
@@ -369,7 +472,7 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
   }
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const personalId = await redisClient.get(`sessionId:${sessionId}`);
@@ -393,17 +496,18 @@ app.post("/api/update-username", isAuthenticated, async (req, res) => {
 app.post("/api/follow", isAuthenticated, async (req, res) => {
   const { sessionId, theirPersonalId } = req.body;
 
+  if (!sessionId || !theirPersonalId) {
+    return res
+      .status(400)
+      .json("Both your sessionId and their personalId are required.");
+  }
+
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
-
-  if (!myPersonalId || !theirPersonalId) {
-    return res
-      .status(400)
-      .json("Both your personalId and their personalId are required.");
-  }
+  if (myPersonalId === theirPersonalId) return res.status(403).end("forbidden");
 
   try {
     const userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
@@ -412,8 +516,12 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
       return res.status(404).json("User not found.");
     }
 
-    const personalIds = await redisClient.lRange(`following:${myPersonalId}`, 0, -1);
-  
+    const personalIds = await redisClient.lRange(
+      `following:${myPersonalId}`,
+      0,
+      -1
+    );
+
     for (const id of personalIds) {
       if (id == theirPersonalId) {
         return res.status(400).json("You are already following this user.");
@@ -422,10 +530,14 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
 
     await redisClient.rPush(`followers:${theirPersonalId}`, myPersonalId);
     await redisClient.rPush(`following:${myPersonalId}`, theirPersonalId);
-    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1)
-    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1)
+    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", 1);
+    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
 
-    res.status(200).json(`Successfully followed ${theirPersonalId}.`);
+    userProfile.followers++;
+    userProfile.isFollowing = true;
+
+    // return the unfollowed user's profile
+    res.status(200).json(userProfile);
   } catch (error) {
     console.error("Error following user:", error);
     res.status(500).json("Failed to follow user.");
@@ -442,44 +554,44 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
   }
 
   // ensure it is really the user
-  if (sessionId !== req.session.session_id)
+  if (sessionId !== req.session.draw_session_id)
     return res.status(403).end("forbidden");
 
   const myPersonalId = await redisClient.get(`sessionId:${sessionId}`);
-
-  if (myPersonalId !== req.session.personalId)
-    return res.status(403).end("forbidden");
+  if (myPersonalId === theirPersonalId) return res.status(403).end("forbidden");
 
   try {
-    const follower = await redisClient.hGetAll(`user:${myPersonalId}`);
-    const following = await redisClient.hGetAll(`user:${theirPersonalId}`);
+    let userProfile = await redisClient.hGetAll(`user:${theirPersonalId}`);
 
-    if (
-      Object.keys(follower).length === 0 ||
-      Object.keys(following).length === 0
-    ) {
-      return res.status(404).json("One or both users not found.");
+    if (Object.keys(userProfile).length === 0) {
+      return res.status(404).json("User not found.");
     }
 
-    const followKey = `following:${myPersonalId}`;
-    const alreadyFollowing = await redisClient.sIsMember(
-      followKey,
-      theirPersonalId
+    const personalIds = await redisClient.lRange(
+      `following:${myPersonalId}`,
+      0,
+      -1
     );
 
-    if (!alreadyFollowing) {
-      return res.status(400).json("You are not following this user.");
+    let isFollowing = false;
+    for (const id of personalIds) {
+      if (id == theirPersonalId) {
+        isFollowing = true;
+      }
     }
+    if (!isFollowing)
+      return res.status(400).json("You don't follow this user.");
 
-    await redisClient
-      .multi()
-      .sRem(followKey, theirPersonalId)
-      .sRem(`followers:${theirPersonalId}`, myPersonalId)
-      .hIncrBy(`user:${myPersonalId}`, "following", -1)
-      .hIncrBy(`user:${theirPersonalId}`, "followers", -1)
-      .exec();
+    await redisClient.lRem(`followers:${theirPersonalId}`, 0, myPersonalId);
+    await redisClient.lRem(`following:${myPersonalId}`, 0, theirPersonalId);
+    await redisClient.hIncrBy(`user:${myPersonalId}`, "following", -1);
+    await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", -1);
 
-    res.status(200).json(`${myPersonalId} has unfollowed ${theirPersonalId}.`);
+    userProfile.followers--;
+    userProfile.isFollowing = false;
+
+    // return the unfollowed user's profile
+    res.status(200).json(userProfile);
   } catch (error) {
     console.error("Error unfollowing user:", error);
     res.status(500).json("Failed to unfollow user.");
@@ -491,7 +603,15 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //   console.log(`Server running on http://localhost:${PORT}`);
 // });
 
-createServer(app).listen(PORT, function (err) {
+// if (process.env.COOKIE_SECURE === "true") {
+//   https.createServer(app).listen(PORT, function (err) {
+//     if (err) console.log(err);
+//     else console.log(`HTTP server on http://localhost:${PORT}`);
+//   });
+// } else {
+
+const server = http.createServer(app).listen(PORT, function (err) {
   if (err) console.log(err);
   else console.log(`HTTP server on http://localhost:${PORT}`);
 });
+// }
