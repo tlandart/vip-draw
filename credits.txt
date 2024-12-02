@@ -1,4 +1,4 @@
-todo: replace this with a full credits page
+Thank you to these links for some code.
 - https://medium.com/@aysunitai/building-a-simple-video-chat-app-with-react-and-peerjs-5650cf89569d
 - https://developer.mozilla.org/en-US/docs
 - https://github.com/peers/peerjs/issues/96

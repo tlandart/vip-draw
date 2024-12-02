@@ -47,7 +47,6 @@ app.use(
       httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
-      // domain: ".tlandart.me",
     },
   })
 );
@@ -58,7 +57,7 @@ const cookieArgs = {
   path: "/",
   secure: process.env.COOKIE_SECURE === "true",
   sameSite: "lax",
-  domain: ".tlandart.me",
+  domain: process.env.DOMAIN || null,
 };
 
 app.use(function (req, res, next) {
