@@ -14,6 +14,7 @@ const app = express();
 const PORT = 4000;
 
 const DRAWINGS_PER_PAGE = 3;
+
 const CLIENT_ID =
   "821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
@@ -117,6 +118,7 @@ app.post("/api/signup", async (req, res) => {
       serialize("draw_session_id", sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
         secure: process.env.COOKIE_SECURE === "true",
         httpOnly: false,
       })
@@ -156,6 +158,7 @@ app.post("/api/signin", async (req, res) => {
       serialize("draw_session_id", existingUser.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
         secure: process.env.COOKIE_SECURE === "true",
         httpOnly: false,
       })
@@ -217,6 +220,7 @@ app.post("/api/google-login", async (req, res) => {
       serialize("draw_session_id", user.sessionId, {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
+        domain: process.env.FRONTEND_DOMAIN,
         secure: process.env.COOKIE_SECURE === "true",
         httpOnly: false,
       })
