@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import {
   TIMER_DEFAULT,
+  MAX_ROUNDS,
   gameMessage,
   gameInit,
   peerUpdateStream,
@@ -205,6 +206,16 @@ export default function VipGame() {
       : gameState.currentPlayer;
   const showCanvas = playerNum.current === gameState.currentPlayer;
 
+  let rankings = [];
+  if (gameState.points && gameState.usernames) {
+    for (let i = 0; i < gameState.points.length; i++)
+      rankings.push({
+        points: gameState.points[i],
+        username: gameState.usernames[i],
+      });
+    rankings = rankings.sort((x, y) => y.points - x.points);
+  }
+
   return (
     <>
       {/* <span>{gameStateToString()}</span> */}
@@ -253,21 +264,30 @@ export default function VipGame() {
         </button>
       )}
 
-      {gameState.start === 1 && playerNum.current === 0 && (
-        <div className="start-button-container flex items-center justify-center h-screen">
-          <button
-            onClick={handleStart}
-            className="bg-[#ffae00] text-[#875d01] text-lg font-medium w-[200px] h-[50px] rounded-md transition duration-200 flex justify-center items-center hover:brightness-110 active:brightness-90"
-          >
-            [Start]
-          </button>
-        </div>
-      )}
-
-      {gameState.start === 1 && playerNum.current !== 0 && (
-        <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
-          Waiting for host to start the game...
-        </div>
+      {gameState.start === 1 && (
+        <>
+          {playerNum.current === 0 && (
+            <div className="start-button-container flex items-center justify-center mt-64">
+              <button
+                onClick={handleStart}
+                className="bg-[#ffae00] text-[#875d01] text-lg font-medium w-[200px] h-[50px] rounded-md transition duration-200 flex justify-center items-center hover:brightness-110 active:brightness-90"
+              >
+                [Start]
+              </button>
+            </div>
+          )}
+          {playerNum.current !== 0 && (
+            <div className="fixed top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-black text-xl font-bold z-10">
+              Waiting for host to start the game...
+            </div>
+          )}
+          <div className="start-button-container flex flex-col items-center justify-center mt-72">
+            Players:
+            {gameState.usernames.map((username, index) => (
+              <div key={index}>{username}</div>
+            ))}
+          </div>
+        </>
       )}
 
       <VipTimer
@@ -278,7 +298,7 @@ export default function VipGame() {
 
       {gameState.start === 2 && (
         <>
-          <div className="game-container bg-purple-900 text-white p-6 rounded-lg shadow-lg w-full md:w-3/4 mx-auto mt-6">
+          <div className="bg-purple-900 text-white p-6 rounded-lg shadow-lg w-full md:w-5/6 mx-auto mt-6">
             <div className="text-center mt-4">
               {showCanvas && (
                 <>
@@ -293,7 +313,18 @@ export default function VipGame() {
               )}
               <div>{gameState.timeLeft}</div>
             </div>
-            <div className="flex flex-row items-center justify-center h-screen relative">
+            <div className="text-2xl flex flex-row items-center justify-center h-32">
+              Round: {Math.ceil(gameState.round / gameState.points.length) || 0}
+            </div>
+            <div className="flex flex-row items-center justify-center h-full relative">
+              <div className="relative flex flex-col justify-center">
+                Points:
+                {rankings.map(({ username, points }, index) => (
+                  <div key={index}>
+                    {1 + index}. {username}: {points}
+                  </div>
+                ))}
+              </div>
               <div className="relative flex justify-center">
                 <VipCanvas
                   className={`m-2 ${showCanvas ? "" : "hidden"}`}
@@ -317,6 +348,22 @@ export default function VipGame() {
             </div>
           </div>
         </>
+      )}
+
+      {gameState.start === 3 && (
+        <div className="bg-purple-900 text-white p-6 rounded-lg shadow-lg w-full md:w-5/6 mx-auto mt-6">
+          <div className="text-2xl flex flex-row items-center justify-center h-32">
+            Game over!
+          </div>
+          <div className="relative flex flex-col justify-center">
+            Final points:
+            {rankings.map(({ username, points }, index) => (
+              <div key={index}>
+                {1 + index}. {username}: {points}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </>
   );

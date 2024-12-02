@@ -256,7 +256,7 @@ app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
 
   try {
     const reply = await redisClient.lRange(`game:${hostId}`, 0, 0);
-    if (reply) {
+    if (Object.keys(reply).length > 0) {
       console.log(`Host ID found: ${hostId}`);
 
       const personalId = await redisClient.get(`sessionId:${sessionId}`);

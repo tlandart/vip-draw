@@ -322,13 +322,15 @@ export function peerDisconnect(stream) {
   Logic for the drawing game. These functions take the entire gameState objectively and makes changes. The game component will render the game with the client's associated player number.
 */
 
-export const TIMER_DEFAULT = 45;
+export const TIMER_DEFAULT = 15;
+export const MAX_ROUNDS = 3;
 
 // start the game
 export function gameInit() {
   // starting state of gameState
   gameSt = {
     ...gameSt,
+    round: 1,
     start: 2, // 0 = can't start; 1 = waiting to start; 2 = starting/started
     playerSave: -1, // which player should save their drawing when reading this
     currentPlayer: 0, // 0 or 1, the player who is drawing
@@ -379,12 +381,14 @@ function gameGuess(playerNum, guess) {
     let points = gameSt.points;
     points[playerNum] += gameSt.timeLeft;
     points[gameSt.currentPlayer] += gameSt.timeLeft / 6;
-    addMessage(`[Player #${playerNum} correctly guessed!]`);
+    addMessage(`[${gameSt.usernames[playerNum]} correctly guessed!]`);
 
     if (gameSt.correctPlayers.length + 1 >= gameSt.playerCount - 1) {
       // correct guess and all players guessed it. switch!
+      if (gameSt.round + 1 > MAX_ROUNDS * points.length) gameEnd();
       gameSt = {
         ...gameSt,
+        round: gameSt.round + 1,
         playerSave: gameSt.currentPlayer, // current player should save their drawing
         currentPlayer:
           gameSt.currentPlayer + 1 < gameSt.playerCount
@@ -407,7 +411,7 @@ function gameGuess(playerNum, guess) {
     }
   } else {
     // incorrect guess OR host sending a message.
-    addMessage(`Player #${playerNum}: ${guess}`);
+    addMessage(`${gameSt.usernames[playerNum]}: ${guess}`);
     gameSt = {
       ...gameSt,
       playerSave: -1, // on gamestate update, don't save the canvas drawing
@@ -444,14 +448,16 @@ function gameReact(reactionCode) {
 // change timer to "seconds"
 export function gameTimeChange(seconds) {
   if (gameSt.start === 2) {
-    gameSt = {
-      ...gameSt,
-      playerSave: -1,
-      timeLeft: seconds,
-    };
-    setGame(gameSt);
-    peerHostSend();
-    if (gameSt.timeLeft <= 0) gameTimeout();
+    if (seconds <= 0) gameTimeout();
+    else {
+      gameSt = {
+        ...gameSt,
+        playerSave: -1,
+        timeLeft: seconds,
+      };
+      setGame(gameSt);
+      peerHostSend();
+    }
   }
 }
 
@@ -459,8 +465,10 @@ export function gameTimeChange(seconds) {
 function gameTimeout() {
   console.log("timer ended");
   if (gameSt.start === 2) {
+    if (gameSt.round + 1 > MAX_ROUNDS * gameSt.points.length) gameEnd();
     gameSt = {
       ...gameSt,
+      round: gameSt.round + 1,
       playerSave: gameSt.currentPlayer, // current player should save their drawing
       currentPlayer:
         gameSt.currentPlayer + 1 < gameSt.playerCount
@@ -476,6 +484,13 @@ function gameTimeout() {
   }
 }
 
-// end the round.
-// send all stats and the final drawing to db
-export function gameEnd(drawing) {}
+// end the game.
+export function gameEnd() {
+  gameSt = {
+    ...gameSt,
+    playerSave: gameSt.currentPlayer, // current player should save their drawing
+    start: 3,
+  };
+  setGame(gameSt);
+  peerHostSend();
+}
