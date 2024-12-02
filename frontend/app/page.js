@@ -18,6 +18,7 @@ export default function Home() {
   const [otherProfile, setOtherProfile] = useState(null);
   const inputEmailRef = useRef();
   const inputPasswordRef = useRef();
+  const inputConfirmPasswordRef = useRef();
   const inputFindRef = useRef();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,6 +45,16 @@ export default function Home() {
     e.preventDefault();
 
     setLoading(true);
+
+    if (
+      isSignUp &&
+      inputPasswordRef.current.value.trim() !==
+        inputConfirmPasswordRef.current.value.trim()
+    ) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const action = isSignUp ? "signup" : "signin";
@@ -307,6 +318,18 @@ export default function Home() {
                   required
                 />
               </div>
+              {isSignUp && (
+                <div className="mb-4">
+                  <label className="block text-sm">Confirm Password</label>
+                  <input
+                    type="password"
+                    ref={inputConfirmPasswordRef}
+                    className="w-full p-2 border border-gray-300 rounded"
+                    placeholder="Confirm your password"
+                    required
+                  />
+                </div>
+              )}
               <button
                 type="submit"
                 className="bg-blue-500 text-white p-2 rounded w-full"
@@ -320,7 +343,6 @@ export default function Home() {
                   ? "Sign Up"
                   : "Sign In"}
               </button>
-
               {!isSignUp && (
                 <button
                   type="button"

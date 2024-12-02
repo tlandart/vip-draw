@@ -12,3 +12,4 @@ Thank you to these links for some code.
 - https://stackoverflow.com/a/40887181
 - https://stackoverflow.com/a/21125098
 - https://www.geeksforgeeks.org/generate-random-characters-numbers-in-javascript/
+- https://stackoverflow.com/a/18367855

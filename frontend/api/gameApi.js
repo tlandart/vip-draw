@@ -1,5 +1,8 @@
 import { Peer } from "peerjs";
 import { accountCreateGame, accountGameGetUsernames } from "./dbApi";
+// import fs from "fs";
+import path from "path";
+import words from "./words";
 
 let peer;
 let joinConns = []; // list of connections from remote players. used only by a host.
@@ -14,23 +17,6 @@ let canvStream; // our outgoing canvas stream
 /* 
   Peerjs interactions.
 */
-
-// TODO read this from https://github.com/googlecreativelab/quickdraw-dataset/blob/master/categories.txt
-let words = [];
-// fetch("./words.txt")
-//   .then((res) => res.text())
-//   .then((text) => {
-//     console.log("got text:", text);
-//     words = text
-//       .split("\n")
-//       .map((word) => word.trim())
-//       .filter((word) => word.length > 0);
-//   })
-//   .catch((e) => console.error(e));
-
-words = ["apple", "orange", "banana"];
-
-export { words };
 
 function randomWord() {
   return words[Math.floor(Math.random() * words.length)];
