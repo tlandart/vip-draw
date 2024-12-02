@@ -51,18 +51,12 @@ app.use(
   })
 );
 
-console.log(
-  'process.env.COOKIE_SECURE === "true"',
-  process.env.COOKIE_SECURE === "true"
-);
-console.log("process.env.FRONTEND_DOMAIN", process.env.FRONTEND_DOMAIN);
-console.log("process.env.SECRET_KEY", process.env.SECRET_KEY);
-
+// args for cookie send
 const cookieArgs = {
   maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
   path: "/",
   secure: process.env.COOKIE_SECURE === "true",
-  sameSite: true,
+  sameSite: "lax",
 };
 
 app.use(function (req, res, next) {
