@@ -47,7 +47,7 @@ app.use(
       httpOnly: false,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
-      domain: ".tlandart.me",
+      // domain: ".tlandart.me",
     },
   })
 );
