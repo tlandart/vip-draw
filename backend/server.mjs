@@ -45,9 +45,7 @@ app.use(
     cookie: {
       path: "/",
       httpOnly: false,
-      // domain: process.env.FRONTEND_DOMAIN,
-      // secure: process.env.COOKIE_SECURE === "true",
-      secure: false,
+      secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
     },
   })
@@ -57,9 +55,9 @@ app.use(
 const cookieArgs = {
   maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
   path: "/",
-  // secure: process.env.COOKIE_SECURE === "true",
-  secure: false,
+  secure: process.env.COOKIE_SECURE === "true",
   sameSite: "lax",
+  domain: process.env.FRONTEND_DOMAIN,
 };
 
 app.use(function (req, res, next) {
@@ -606,7 +604,7 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //   });
 // } else {
 
-const server = http.createServer(app).listen(PORT, function (err) {
+export const server = http.createServer(app).listen(PORT, function (err) {
   if (err) console.log(err);
   else console.log(`HTTP server on http://localhost:${PORT}`);
 });
