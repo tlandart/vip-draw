@@ -185,26 +185,30 @@ export default function Home() {
     <GoogleOAuthProvider clientId="821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com">
       {/* <button onClick={() => handlePing()}>PING</button> */}
       <div className="relative h-screen w-full">
-        <div className="absolute top-20 right-2">
-          {isAuthenticated ? (
-            <button
-              onClick={handleProfileClick}
-              className="bg-blue-500 text-white p-2 rounded"
-            >
-              Open Profile
-            </button>
-          ) : (
+        {isAuthenticated ? (
+          <button
+            onClick={handleProfileClick}
+            className="bg-blue-500 text-white p-2 rounded absolute top-20 right-2"
+          >
+            Open Profile
+          </button>
+        ) : (
+          <div>
+            <h1 className="page-title">VIP Draw!</h1>
+            <p className="text-3xl text-center mt-32">
+              Create your account now!
+            </p>
             <button
               onClick={() => {
                 setShowForm(!showForm);
                 setIsSignUp(false);
               }}
-              className="bg-blue-500 text-white p-2 rounded"
+              className="bg-blue-500 text-white p-2 rounded absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
             >
               Sign In
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {showProfile && profile && (
           <VipProfile
@@ -221,7 +225,6 @@ export default function Home() {
             onUserClick={handleUserClickMine}
           />
         )}
-
         {otherProfile && (
           <VipProfile
             myProfile={profile}
@@ -237,7 +240,6 @@ export default function Home() {
             onUserClick={handleUserClickOther}
           />
         )}
-
         <div className="absolute bottom-2 right-2">
           {isAuthenticated && (
             <button
@@ -278,7 +280,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
         {showForm && !isAuthenticated && (
           <div className="absolute top-40 right-2 bg-white p-6 rounded shadow-md w-80">
             <h2 className="text-xl mb-4">
@@ -341,7 +342,6 @@ export default function Home() {
             </button>
           </div>
         )}
-
         {isAuthenticated && <VipGame />}
       </div>
     </GoogleOAuthProvider>

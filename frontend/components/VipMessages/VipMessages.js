@@ -45,24 +45,28 @@ export default function VipMessages({
         <button
           onClick={() => gameMessage(playerNum, "react:👍")}
           className="w-8 h-8 bg-green-400 text-white rounded"
+          style={{ userSelect: "none" }}
         >
           👍
         </button>
         <button
           onClick={() => gameMessage(playerNum, "react:💖")}
           className="w-8 h-8 bg-red-400 text-white rounded"
+          style={{ userSelect: "none" }}
         >
           💖
         </button>
         <button
           onClick={() => gameMessage(playerNum, "react:😂")}
           className="w-8 h-8 bg-yellow-300 text-white rounded"
+          style={{ userSelect: "none" }}
         >
           😂
         </button>
         <button
           onClick={() => gameMessage(playerNum, "react:💩")}
           className="w-8 h-8 bg-orange-900 text-white rounded"
+          style={{ userSelect: "none" }}
         >
           💩
         </button>
@@ -74,6 +78,7 @@ export default function VipMessages({
           style={{
             top: `${50 + Math.random() * 200}px`,
             left: `${380 + Math.random() * 200}px`,
+            userSelect: "none",
           }}
         >
           {r.reaction}

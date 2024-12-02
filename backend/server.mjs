@@ -372,7 +372,8 @@ app.post("/save-drawing", isAuthenticated, async (req, res) => {
 
   try {
     await redisClient.lPush(`drawings:${personalId}`, JSON.stringify(drawing));
-    res.status(200);
+    console.log("drawing save success");
+    res.status(200).json("Success");
   } catch (error) {
     console.error("Error saving drawing:", error);
     res.status(500).json("Failed to save drawing.");

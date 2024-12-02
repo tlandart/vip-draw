@@ -72,8 +72,6 @@ export default function VipGame() {
         playerNum.current = gameState.playerCount - 1;
 
       // save the canvas to db if our player should
-      // TODO this needs to change for saving other stats.
-      // idea: in gameState, a dictionary w booleans "save" = [drawing: 0, correctGuesser: 2, time: 45]
       if (
         gameState.playerSave >= 0 &&
         gameState.playerSave === playerNum.current
@@ -180,7 +178,7 @@ export default function VipGame() {
       });
       idLabelRef.current.innerHTML = "";
     }
-    peerDisconnect(stream);
+    peerDisconnect();
 
     setShowBackButton(false); // Hide back button when going back
     setIsJoinGameClicked(false); // Hide the join game input field
@@ -218,7 +216,7 @@ export default function VipGame() {
 
   return (
     <>
-      {/* <span>{gameStateToString()}</span> */}
+      <span>{gameStateToString()}</span>
 
       <span
         className="text-3xl flex w-fit ml-auto mr-auto mt-5"
@@ -258,7 +256,7 @@ export default function VipGame() {
         </div>
       )}
 
-      {showBackButton && (
+      {gameState.start > 0 && showBackButton && (
         <button onClick={handleBack} className="back-button">
           &lt; Back
         </button>
@@ -270,9 +268,12 @@ export default function VipGame() {
             <div className="start-button-container flex items-center justify-center mt-64">
               <button
                 onClick={handleStart}
-                className="bg-[#ffae00] text-[#875d01] text-lg font-medium w-[200px] h-[50px] rounded-md transition duration-200 flex justify-center items-center hover:brightness-110 active:brightness-90"
+                className={`bg-[#ffae00] text-[#875d01] text-lg font-medium w-[200px] h-[50px] rounded-md transition duration-200 flex justify-center items-center hover:brightness-110 active:brightness-90 ${
+                  gameState.playerCount < 2 ? "opacity-35" : ""
+                }`}
+                disabled={gameState.playerCount < 2}
               >
-                [Start]
+                {gameState.playerCount < 2 ? "[Need 2 players]" : "[Start]"}
               </button>
             </div>
           )}
