@@ -40,6 +40,7 @@ app.use(
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: process.env.COOKIE_SECURE === "true" ? "none" : "lax",
       maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+      path: "/",
     },
   })
 );
