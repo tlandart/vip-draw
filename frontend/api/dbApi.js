@@ -4,9 +4,15 @@ export function getSessionId() {
   if (match) return match[2];
 }
 
+function deleteCookie(name) {
+  document.cookie = name + "=";
+}
+
 async function handleResponse(res) {
   if (res.status != 200) {
     const err = await res.json();
+    // delete draw_session_id
+    deleteCookie("draw_session_id");
     return { err: err };
   }
   const s = await res.json();
@@ -164,6 +170,19 @@ export async function accountGetDrawings(personalId, page) {
       personalId: personalId,
       page: page,
     })}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    }
+  ).then(handleResponse);
+}
+
+export async function accountGetFollowersFollowing(action, personalId) {
+  if (!["followers", "following"].includes(action))
+    return { err: "Invalid action." };
+  return fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND}/api/${action}/${personalId}`,
     {
       method: "GET",
       headers: { "Content-Type": "application/json" },

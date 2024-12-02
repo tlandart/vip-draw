@@ -58,6 +58,8 @@ export default function Home() {
         setIsAuthenticated(true);
         setShowForm(false);
       } else {
+        setProfile(null);
+        setIsAuthenticated(false);
         setError(
           profile.err ||
             (isSignUp ? "Failed to create account" : "Failed to sign in")
@@ -79,6 +81,9 @@ export default function Home() {
 
   const handleGoogleLoginFailure = (error) => {
     console.error("Google login error:", error);
+    setProfile(null);
+    setIsAuthenticated(false);
+    setShowProfile(false);
     setError("Google login failed");
   };
 
@@ -89,6 +94,9 @@ export default function Home() {
       setIsAuthenticated(false);
       setShowProfile(false);
     } else {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
       setError("Failed to log out");
     }
   };
@@ -108,6 +116,9 @@ export default function Home() {
       setProfile(profile);
       setIsAuthenticated(true);
     } else {
+      setProfile(null);
+      setIsAuthenticated(false);
+      setShowProfile(false);
       setError("Error fetching user profile.");
     }
   };
@@ -119,6 +130,7 @@ export default function Home() {
       setShowFindPanel(false);
       setOtherProfile(otherProfile);
     } else {
+      setOtherProfile(null);
       setError("Error fetching other user profile.");
     }
   };
@@ -131,6 +143,22 @@ export default function Home() {
   const handleOtherProfileClick = (e) => {
     e.preventDefault();
     fetchOtherUserProfile(inputFindRef.current.value.trim());
+  };
+
+  const handleUserClickMine = (user) => {
+    if (user.personalId !== profile.personalId) {
+      setOtherProfile(user);
+      setShowProfile(false);
+    }
+  };
+
+  const handleUserClickOther = (user) => {
+    if (user.personalId === profile.personalId) {
+      setOtherProfile(null);
+      setShowProfile(true);
+    } else {
+      setOtherProfile(user);
+    }
   };
 
   const handleFollowSubmit = async () => {
@@ -178,14 +206,19 @@ export default function Home() {
           )}
         </div>
 
-        {showProfile && (
+        {showProfile && profile && (
           <VipProfile
             theirProfile={profile}
             setTheirProfile={setProfile}
             isMine={true}
             onLogout={handleLogout}
             onClose={closeProfile}
-            onError={(e) => setError(e)}
+            onError={(e) => {
+              setProfile(null);
+              setIsAuthenticated(false);
+              setError(e);
+            }}
+            onUserClick={handleUserClickMine}
           />
         )}
 
@@ -197,10 +230,15 @@ export default function Home() {
             setTheirProfile={setOtherProfile}
             isMine={false}
             onClose={closeOtherProfile}
-            onError={(e) => setError(e)}
+            onError={(e) => {
+              setOtherProfile(null);
+              setError(e);
+            }}
+            onUserClick={handleUserClickOther}
           />
         )}
-        <div className="absolute bottom-20 right-2">
+
+        <div className="absolute bottom-2 right-2">
           {isAuthenticated && (
             <button
               onClick={() => setShowFindPanel(true)}
