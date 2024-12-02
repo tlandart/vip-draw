@@ -24,7 +24,10 @@ app.use(bodyParser.json());
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", process.env.FRONTEND);
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE");
-  res.header("Access-Control-Allow-Headers", ["Content-Type", "Authorization"]);
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Origin, Accept, X-Requested-With"
+  );
   res.header("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") {
     return res.status(200).end();
@@ -37,16 +40,25 @@ app.set("trust proxy", 1);
 app.use(
   session({
     secret: process.env.SECRET_KEY,
-    resave: true,
+    resave: false,
     saveUninitialized: true,
     cookie: {
+      path: "/",
       httpOnly: false,
-      domain: process.env.FRONTEND_DOMAIN,
       secure: process.env.COOKIE_SECURE === "true",
       sameSite: "lax",
     },
   })
 );
+
+// args for cookie send
+const cookieArgs = {
+  maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+  path: "/",
+  secure: process.env.COOKIE_SECURE === "true",
+  sameSite: "lax",
+  domain: process.env.DOMAIN || null,
+};
 
 app.use(function (req, res, next) {
   console.log("Request", req.method, req.url, req.body);
@@ -115,13 +127,7 @@ app.post("/api/signup", async (req, res) => {
     req.session.draw_session_id = sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", sessionId, cookieArgs)
     );
     res.status(200).json(user);
   } catch (error) {
@@ -155,13 +161,7 @@ app.post("/api/signin", async (req, res) => {
     req.session.draw_session_id = existingUser.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", existingUser.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", existingUser.sessionId, cookieArgs)
     );
     res.status(200).json(existingUser);
   } catch (error) {
@@ -217,13 +217,7 @@ app.post("/api/google-login", async (req, res) => {
     req.session.draw_session_id = user.sessionId;
     res.setHeader(
       "Set-Cookie",
-      serialize("draw_session_id", user.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-        domain: process.env.FRONTEND_DOMAIN,
-        secure: process.env.COOKIE_SECURE === "true",
-        httpOnly: false,
-      })
+      serialize("draw_session_id", user.sessionId, cookieArgs)
     );
     res.status(200).json(user);
   } catch (err) {
@@ -610,7 +604,7 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //   });
 // } else {
 
-const server = http.createServer(app).listen(PORT, function (err) {
+export const server = http.createServer(app).listen(PORT, function (err) {
   if (err) console.log(err);
   else console.log(`HTTP server on http://localhost:${PORT}`);
 });

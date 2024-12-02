@@ -227,7 +227,7 @@ export default function VipGame() {
 
       {gameState.start === 0 && (
         <div className="button-container">
-          <h1 className="page-title">The VIP Room</h1>
+          <h1 className="page-title">VIP Draw!</h1>
           <button onClick={handleHost}>[Host game]</button>
           <button onClick={handleJoinGameClick}>[Join game]</button>
           {isJoinGameClicked && (
