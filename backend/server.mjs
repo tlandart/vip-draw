@@ -38,7 +38,7 @@ app.use(
     resave: true,
     saveUninitialized: true,
     cookie: {
-      httpOnly: true,
+      httpOnly: false,
       // domain: process.env.FRONTEND,
       secure: process.env.COOKIE_SECURE === "true",
       // sameSite: "strict",
@@ -112,6 +112,7 @@ app.post("/api/signup", async (req, res) => {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(user);
@@ -150,6 +151,7 @@ app.post("/api/signin", async (req, res) => {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(existingUser);
@@ -210,6 +212,7 @@ app.post("/api/google-login", async (req, res) => {
         maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
         path: "/",
         secure: process.env.COOKIE_SECURE === "true",
+        httpOnly: false,
       })
     );
     res.status(200).json(user);
