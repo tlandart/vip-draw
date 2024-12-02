@@ -301,7 +301,7 @@ export default function VipGame() {
                   width={300}
                   height={300}
                   lineWidth={5}
-                  minDist={1}
+                  minDist={3}
                 />
               </div>
               {playerNum.current !== gameState.currentPlayer &&

@@ -148,3 +148,26 @@ export async function accountGameGetUsernames(hostId) {
     }
   ).then(handleResponse);
 }
+
+export async function accountGameSaveDrawing(drawing) {
+  return fetch(`${process.env.NEXT_PUBLIC_BACKEND}/save-drawing`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId: getSessionId(), drawing: drawing }),
+    credentials: "include",
+  }).then(handleResponse);
+}
+
+export async function accountGetDrawings(personalId, page) {
+  return fetch(
+    `${process.env.NEXT_PUBLIC_BACKEND}/get-drawing?${new URLSearchParams({
+      personalId: personalId,
+      page: page,
+    })}`,
+    {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    }
+  ).then(handleResponse);
+}

@@ -1,5 +1,10 @@
-import { accountUsernameSubmit, accountFollowUnfollow } from "@/api/dbApi";
-import { useRef } from "react";
+import {
+  accountUsernameSubmit,
+  accountFollowUnfollow,
+  accountGetDrawings,
+} from "@/api/dbApi";
+import VipDisplayCanvas from "../VipDisplayCanvas/VipDisplayCanvas";
+import { useRef, useState, useEffect } from "react";
 
 /*
   Draws a given profile.
@@ -21,6 +26,36 @@ export default function VipProfile({
   onError,
 }) {
   const inputNewUsernameRef = useRef();
+
+  // the current drawings we are showing, at most 3
+  const [drawings, setDrawings] = useState(null);
+  const [drawingsPage, setDrawingsPage] = useState(0);
+  const [end, setEnd] = useState(false);
+
+  useEffect(
+    function () {
+      accountGetDrawings(profile.personalId, drawingsPage).then((res) => {
+        let finalDrawing = [];
+        console.log(res);
+        for (const dr of res.drawings) {
+          finalDrawing.push(JSON.parse(dr));
+        }
+        console.log(finalDrawing);
+        setDrawings(finalDrawing);
+        if (res.end) setEnd(true);
+        else setEnd(false);
+      });
+    },
+    [profile, drawingsPage]
+  );
+
+  const handlePrev = () => {
+    setDrawingsPage(drawingsPage - 1);
+  };
+
+  const handleNext = () => {
+    setDrawingsPage(drawingsPage + 1);
+  };
 
   const handleUsernameSubmit = async (e) => {
     e.preventDefault();
@@ -48,7 +83,7 @@ export default function VipProfile({
   return (
     <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
       {profile && (
-        <div className="relative w-3/4 h-1/2 bg-gray-100 p-6 rounded-lg shadow-lg">
+        <div className="relative w-3/4 h-3/4 bg-gray-100 p-6 rounded-lg shadow-lg">
           <button
             onClick={() => onClose()}
             className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
@@ -115,7 +150,44 @@ export default function VipProfile({
             </div>
           </div>
 
-          <div className="flex flex-row gap-3 absolute bottom-5">
+          {drawings && (
+            <div>
+              <h1 className="flex justify-center">GALLERY</h1>
+              <div className="flex gap-2 justify-center flex-row w-full">
+                {drawings.map((drawing, index) => (
+                  <VipDisplayCanvas
+                    width={100}
+                    height={100}
+                    drawing={drawing}
+                    key={index}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-row justify-center mt-2">
+                <button
+                  className={`w-7 h-7 bg-orange-500 text-white p-2 rounded-full ${
+                    drawingsPage <= 0 ? "opacity-35" : ""
+                  }`}
+                  onClick={handlePrev}
+                  disabled={drawingsPage <= 0}
+                >
+                  &lt;
+                </button>
+                <button
+                  className={`w-7 h-7 bg-orange-500 text-white p-2 rounded-full ${
+                    end ? "opacity-35" : ""
+                  }
+                  `}
+                  disabled={end}
+                  onClick={handleNext}
+                >
+                  &gt;
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-row gap-3 absolute left-2 bottom-12">
             {!clientProfile && (
               <button
                 onClick={onLogout}

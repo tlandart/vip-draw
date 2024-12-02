@@ -13,6 +13,7 @@ import { parse, serialize } from "cookie";
 const app = express();
 const PORT = 4000;
 
+const DRAWINGS_PER_PAGE = 3;
 const CLIENT_ID =
   "821267595423-77gcpdmldn8t63e2ck2jntncld0k7uv9.apps.googleusercontent.com";
 const client = new OAuth2Client(CLIENT_ID);
@@ -354,6 +355,60 @@ app.get("/game-usernames", isAuthenticated, async (req, res) => {
   } catch (err) {
     console.error("Error getting usernames from Host ID:", err);
     res.status(500).json("Failed to get usernames from Host ID.");
+  }
+});
+
+app.post("/save-drawing", isAuthenticated, async (req, res) => {
+  const { sessionId, drawing } = req.body;
+
+  if (!sessionId || !drawing || drawing.length <= 0) {
+    return res.status(400).json("sessionId and drawing are required.");
+  }
+
+  // ensure it is really the user
+  if (sessionId !== req.session.draw_session_id)
+    return res.status(403).end("forbidden");
+
+  const personalId = await redisClient.get(`sessionId:${sessionId}`);
+
+  try {
+    await redisClient.lPush(`drawings:${personalId}`, JSON.stringify(drawing));
+    res.status(200);
+  } catch (error) {
+    console.error("Error saving drawing:", error);
+    res.status(500).json("Failed to save drawing.");
+  }
+});
+
+app.get("/get-drawing/", isAuthenticated, async (req, res) => {
+  const { personalId, page } = req.query;
+
+  if (!personalId || !page) {
+    return res.status(400).json("personalId and page are required.");
+  }
+
+  try {
+    const length = await redisClient.lLen(`drawings:${personalId}`);
+    if (page * DRAWINGS_PER_PAGE > length || page < 0)
+      return res.status(400).json("page index out of bounds.");
+
+    const drawings = await redisClient.lRange(
+      `drawings:${personalId}`,
+      page * DRAWINGS_PER_PAGE,
+      page * DRAWINGS_PER_PAGE + DRAWINGS_PER_PAGE - 1
+    );
+
+    console.log("returning drawings:", {
+      drawings: drawings,
+      end: (page + 1) * DRAWINGS_PER_PAGE > length,
+    });
+    res.status(200).json({
+      drawings: drawings,
+      end: (page + 1) * DRAWINGS_PER_PAGE > length,
+    });
+  } catch (error) {
+    console.error("Error getting drawings:", error);
+    res.status(500).json("Failed to get drawings.");
   }
 });
 

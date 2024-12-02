@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react";
+import { accountGameSaveDrawing } from "@/api/dbApi";
 
 /* A Canvas component that can be drawn on with the mouse, with undo and reset buttons.
     - canvasRef: will be set to a reference to the pure html canvas
@@ -37,8 +38,16 @@ export default function VipCanvas({
     // set the function
     setCanvasSaveFunc(() => () => {
       // TODO save drawing to db
-      console.log("saving to db", currentDrawing.current);
-      // we don't actually need to reset canvas because it is re-rendered anyway
+      console.log("saving drawing", currentDrawing.current);
+
+      accountGameSaveDrawing(currentDrawing.current).then((res) => {
+        if (!res.err) {
+          console.log("saved drawing");
+        } else {
+          console.error("Failed to save drawing:", res.err);
+        }
+      });
+
       resetCanvas(true);
     });
 
