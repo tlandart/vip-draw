@@ -29,9 +29,9 @@ app.use((req, res, next) => {
     "Content-Type, Origin, Accept, X-Requested-With"
   );
   res.header("Access-Control-Allow-Credentials", "true");
-  // if (req.method === "OPTIONS") {
-  //   return res.status(200).end();
-  // }
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
   next();
 });
 
