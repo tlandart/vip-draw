@@ -8,19 +8,21 @@ import { useRef, useState, useEffect } from "react";
 
 /*
   Draws a given profile.
-    - clientProfile: object that contains profile information for the current user (to determine their relationship with the drawn user).
-        if set, we assume we are not drawing out own profile
-    - profile: object that contains profile information to be drawn
-    - setProfile: function to change profile at a higher level
-    - onLogout: function to log out of account
+    - myProfile: object that contains profile information for the current user (to determine their relationship with the drawn user).
+        if set, we assume we are not drawing out own profile, OPTIONAL
+    - setMyProfile: function to change myProfile at a higher level, OPTIONAL
+    - theirProfile: object that contains profile information to be drawn
+    - setTheirProfile: function to change profile at a higher level
+    - onLogout: function to log out of account, OPTIONAL
     - onClose: function to close this component
     - onError: function to set error text at a higher level
 */
 
 export default function VipProfile({
-  clientProfile,
-  profile,
-  setProfile,
+  myProfile,
+  setMyProfile,
+  theirProfile,
+  setTheirProfile,
   onClose,
   onLogout,
   onError,
@@ -34,19 +36,17 @@ export default function VipProfile({
 
   useEffect(
     function () {
-      accountGetDrawings(profile.personalId, drawingsPage).then((res) => {
+      accountGetDrawings(theirProfile.personalId, drawingsPage).then((res) => {
         let finalDrawing = [];
-        console.log(res);
         for (const dr of res.drawings) {
           finalDrawing.push(JSON.parse(dr));
         }
-        console.log(finalDrawing);
         setDrawings(finalDrawing);
         if (res.end) setEnd(true);
         else setEnd(false);
       });
     },
-    [profile, drawingsPage]
+    [theirProfile, drawingsPage]
   );
 
   const handlePrev = () => {
@@ -63,18 +63,16 @@ export default function VipProfile({
       inputNewUsernameRef.current.value.trim()
     );
     if (!pf.err) {
-      setProfile(pf);
+      setTheirProfile(pf);
     } else {
       onError("Failed to update username.");
     }
   };
 
   const handleFollow = async (action) => {
-    console.log("trying to ", action, profile.personalId);
-    let pf = await accountFollowUnfollow(action, profile.personalId);
+    let pf = await accountFollowUnfollow(action, theirProfile.personalId);
     if (!pf.err) {
-      clientProfile.isFollowing = !clientProfile.isFollowing;
-      setProfile(pf);
+      setTheirProfile(pf);
     } else {
       onError("Failed to follow/unfollow.");
     }
@@ -82,8 +80,8 @@ export default function VipProfile({
 
   return (
     <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
-      {profile && (
-        <div className="relative w-3/4 h-3/4 bg-gray-100 p-6 rounded-lg shadow-lg">
+      {theirProfile && (
+        <div className="relative w-3/4 h-5/6 bg-gray-100 p-6 rounded-lg shadow-lg">
           <button
             onClick={() => onClose()}
             className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
@@ -92,9 +90,9 @@ export default function VipProfile({
           </button>
           <h2 className="text-xl font-bold">Profile</h2>
 
-          {clientProfile && clientProfile.personalId !== profile.personalId && (
+          {myProfile && myProfile.personalId !== theirProfile.personalId && (
             <div>
-              {!clientProfile.isFollowing && (
+              {!theirProfile.isFollowing && (
                 <button
                   className="bg-blue-500 text-white rounded mt-2 ml-auto"
                   onClick={() => handleFollow("follow")}
@@ -102,7 +100,7 @@ export default function VipProfile({
                   Follow
                 </button>
               )}
-              {clientProfile.isFollowing && (
+              {theirProfile.isFollowing && (
                 <button
                   className="bg-red-500 text-white rounded mt-2 ml-auto"
                   onClick={() => handleFollow("unfollow")}
@@ -115,10 +113,10 @@ export default function VipProfile({
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <label className="block text-sm">
-                Username: {profile.username}
+                Username: {theirProfile.username}
               </label>
             </div>
-            {!clientProfile && (
+            {!myProfile && (
               <form
                 className="flex items-center"
                 onSubmit={handleUsernameSubmit}
@@ -142,10 +140,10 @@ export default function VipProfile({
           <div className="mb-4">
             <div className="flex justify-start gap-3">
               <label className="block text-sm">
-                Followers: {profile.followers}
+                Followers: {theirProfile.followers}
               </label>
               <label className="block text-sm">
-                Following: {profile.following}
+                Following: {theirProfile.following}
               </label>
             </div>
           </div>
@@ -188,7 +186,7 @@ export default function VipProfile({
           )}
 
           <div className="flex flex-row gap-3 absolute left-2 bottom-12">
-            {!clientProfile && (
+            {!myProfile && (
               <button
                 onClick={onLogout}
                 className="absolute bg-red-500 text-white p-2 rounded mt-4 mx-auto"
@@ -197,7 +195,7 @@ export default function VipProfile({
               </button>
             )}
             <label className="block text-sm">
-              Personal ID: {profile.personalId}
+              Personal ID: {theirProfile.personalId}
             </label>
           </div>
         </div>

@@ -40,9 +40,9 @@ app.use(
     saveUninitialized: true,
     cookie: {
       httpOnly: false,
-      // domain: process.env.FRONTEND,
+      domain: process.env.FRONTEND_DOMAIN,
       secure: process.env.COOKIE_SECURE === "true",
-      // sameSite: "strict",
+      sameSite: "lax",
     },
   })
 );
@@ -398,10 +398,6 @@ app.get("/get-drawing/", isAuthenticated, async (req, res) => {
       page * DRAWINGS_PER_PAGE + DRAWINGS_PER_PAGE - 1
     );
 
-    console.log("returning drawings:", {
-      drawings: drawings,
-      end: (page + 1) * DRAWINGS_PER_PAGE > length,
-    });
     res.status(200).json({
       drawings: drawings,
       end: (page + 1) * DRAWINGS_PER_PAGE > length,
@@ -534,6 +530,7 @@ app.post("/api/follow", isAuthenticated, async (req, res) => {
     await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", 1);
 
     userProfile.followers++;
+    userProfile.isFollowing = true;
 
     // return the unfollowed user's profile
     res.status(200).json(userProfile);
@@ -587,6 +584,7 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
     await redisClient.hIncrBy(`user:${theirPersonalId}`, "followers", -1);
 
     userProfile.followers--;
+    userProfile.isFollowing = false;
 
     // return the unfollowed user's profile
     res.status(200).json(userProfile);
@@ -607,7 +605,8 @@ app.post("/api/unfollow", isAuthenticated, async (req, res) => {
 //     else console.log(`HTTP server on http://localhost:${PORT}`);
 //   });
 // } else {
-http.createServer(app).listen(PORT, function (err) {
+
+const server = http.createServer(app).listen(PORT, function (err) {
   if (err) console.log(err);
   else console.log(`HTTP server on http://localhost:${PORT}`);
 });

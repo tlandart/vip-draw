@@ -37,7 +37,6 @@ export default function VipDisplayCanvas({ width, height, drawing }) {
 
   // draw a full drawing (an array of lines)
   function drawDrawing(lines) {
-    console.log(lines);
     for (const line of lines) {
       if (line.points.length === 1) {
         drawLineSegment(
@@ -64,11 +63,12 @@ export default function VipDisplayCanvas({ width, height, drawing }) {
   }
 
   return (
-    <div className="border-2 border-amber-500 ">
+    <div className="border-2 border-amber-500">
       <canvas
         className={`bg-white h-52 w-52`}
         width={300}
         height={300}
+        style={{ width: "100%", height: "100%" }}
         ref={canvasRef}
       ></canvas>
     </div>

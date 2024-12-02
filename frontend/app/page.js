@@ -25,7 +25,7 @@ export default function Home() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showFindPanel, setshowFindPanel] = useState(false);
+  const [showFindPanel, setShowFindPanel] = useState(false);
 
   useEffect(() => {
     const sessionId = getSessionId();
@@ -116,7 +116,7 @@ export default function Home() {
     let otherProfile = await accountFetchProfile(pid);
     if (!otherProfile.err) {
       console.log("got OTHER profile", otherProfile);
-      setshowFindPanel(false);
+      setShowFindPanel(false);
       setOtherProfile(otherProfile);
     } else {
       setError("Error fetching other user profile.");
@@ -139,7 +139,7 @@ export default function Home() {
 
       if (!profile.err) {
         setProfile(profile);
-        setshowFindPanel(false);
+        setShowFindPanel(false);
       } else {
         setError(profile.err || "Failed to follow");
       }
@@ -150,7 +150,7 @@ export default function Home() {
   };
 
   const handleFindPanelClose = () => {
-    setshowFindPanel(false);
+    setShowFindPanel(false);
   };
 
   return (
@@ -180,8 +180,8 @@ export default function Home() {
 
         {showProfile && (
           <VipProfile
-            profile={profile}
-            setProfile={setProfile}
+            theirProfile={profile}
+            setTheirProfile={setProfile}
             isMine={true}
             onLogout={handleLogout}
             onClose={closeProfile}
@@ -191,26 +191,25 @@ export default function Home() {
 
         {otherProfile && (
           <VipProfile
-            clientProfile={profile}
-            profile={otherProfile}
-            setProfile={setOtherProfile}
+            myProfile={profile}
+            setMyProfile={setProfile}
+            theirProfile={otherProfile}
+            setTheirProfile={setOtherProfile}
             isMine={false}
             onClose={closeOtherProfile}
             onError={(e) => setError(e)}
           />
         )}
-
         <div className="absolute bottom-20 right-2">
           {isAuthenticated && (
             <button
-              onClick={() => setshowFindPanel(true)}
+              onClick={() => setShowFindPanel(true)}
               className="bg-blue-500 text-white p-2 rounded"
             >
               Find Someone
             </button>
           )}
         </div>
-
         {showFindPanel && (
           <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
             <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
