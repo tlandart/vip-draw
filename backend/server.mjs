@@ -70,6 +70,163 @@ const isAuthenticated = function (req, res, next) {
   next();
 };
 
+app.post("/api/signup", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json("Email and password are required.");
+  }
+
+  try {
+    const existingUser = await redisClient.get(`email:${email}`);
+    if (existingUser) {
+      return res.status(400).json("Email already in use.");
+    }
+
+    const personalId = uuidv4();
+    const sessionId = uuidv4();
+    const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const user = {
+      personalId,
+      sessionId: sessionId,
+      email: email,
+      hash: hashedPassword,
+      username: defaultUsername,
+      followers: 0,
+      following: 0,
+    };
+
+    await redisClient.hSet(`user:${personalId}`, user);
+    await redisClient.set(`email:${email}`, personalId);
+    await redisClient.set(`sessionId:${sessionId}`, personalId);
+    // start a session
+    req.session.session_id = sessionId;
+    res.setHeader(
+      "Set-Cookie",
+      serialize("session_id", sessionId, {
+        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        path: "/",
+        secure: process.env.COOKIE_SECURE === "true",
+      })
+    );
+    res.status(200).json(user);
+  } catch (error) {
+    console.error("Error during signup:", error);
+    res.status(500).json("Failed to create account");
+  }
+});
+
+app.post("/api/signin", async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json("Email and password are required.");
+  }
+
+  try {
+    const personalId = await redisClient.get(`email:${email}`);
+    const existingUser = await redisClient.hGetAll(`user:${personalId}`);
+
+    if (!existingUser || Object.keys(existingUser).length === 0) {
+      return res.status(400).json("User not found.");
+    }
+
+    const match = await bcrypt.compare(password, existingUser.hash);
+
+    if (!match) {
+      return res.status(400).json("Incorrect password.");
+    }
+
+    // start a session
+    req.session.session_id = existingUser.sessionId;
+    res.setHeader(
+      "Set-Cookie",
+      serialize("session_id", existingUser.sessionId, {
+        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        path: "/",
+        secure: process.env.COOKIE_SECURE === "true",
+      })
+    );
+    res.status(200).json(existingUser);
+  } catch (error) {
+    console.error("Error during sign-in:", error);
+    res.status(500).json("Failed to sign in");
+  }
+});
+
+app.post("/api/google-login", async (req, res) => {
+  const { credential } = req.body;
+
+  if (!credential) {
+    return res.status(400).json("Credential is required.");
+  }
+
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { sub, email, name } = payload;
+    let user = await redisClient.hGetAll(`user:${sub}`);
+
+    if (Object.keys(user).length === 0) {
+      const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
+      const personalId = sub;
+      const sessionId = uuidv4();
+
+      user = {
+        personalId,
+        sessionId: sessionId,
+        email: email,
+        username: defaultUsername,
+        followers: 0,
+        following: 0,
+      };
+
+      await redisClient.hSet(`user:${personalId}`, user);
+      await redisClient.set(`email:${email}`, personalId);
+      await redisClient.set(`sessionId:${sessionId}`, personalId);
+      console.log(
+        `New user created for ${email} with username ${defaultUsername}.`
+      );
+    } else {
+      console.log(`User ${email} exists, signing in.`);
+      user.followers = user.followers || 0;
+      user.following = user.following || 0;
+    }
+
+    // start a session
+    req.session.session_id = user.sessionId;
+    res.setHeader(
+      "Set-Cookie",
+      serialize("session_id", user.sessionId, {
+        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
+        path: "/",
+        secure: process.env.COOKIE_SECURE === "true",
+      })
+    );
+    res.status(200).json(user);
+  } catch (err) {
+    console.error("Error verifying Google ID token:", err);
+    res.status(500).json("Failed to authenticate user.");
+  }
+});
+
+app.post("/api/logout", isAuthenticated, (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json("Failed to log out");
+    }
+    res.clearCookie("session_id");
+    res.status(200).json("Logged out successfully");
+  });
+});
+
 app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
   const { hostId } = req.params;
   const { sessionId } = req.body;
@@ -188,160 +345,6 @@ app.get("/game-usernames", isAuthenticated, async (req, res) => {
     console.error("Error getting usernames from Host ID:", err);
     res.status(500).json("Failed to get usernames from Host ID.");
   }
-});
-
-app.post("/api/signup", async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json("Email and password are required.");
-  }
-
-  try {
-    const existingUser = await redisClient.get(`email:${email}`);
-    if (existingUser) {
-      return res.status(400).json("Email already in use.");
-    }
-
-    const personalId = uuidv4();
-    const sessionId = uuidv4();
-    const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = {
-      personalId,
-      sessionId: sessionId,
-      email: email,
-      hash: hashedPassword,
-      username: defaultUsername,
-      followers: 0,
-      following: 0,
-    };
-
-    await redisClient.hSet(`user:${personalId}`, user);
-    await redisClient.set(`email:${email}`, personalId);
-    await redisClient.set(`sessionId:${sessionId}`, personalId);
-    // start a session
-    req.session.session_id = sessionId;
-    res.setHeader(
-      "Set-Cookie",
-      serialize("session_id", sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-      })
-    );
-    res.status(200).json(user);
-  } catch (error) {
-    console.error("Error during signup:", error);
-    res.status(500).json("Failed to create account");
-  }
-});
-
-app.post("/api/signin", async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    return res.status(400).json("Email and password are required.");
-  }
-
-  try {
-    const personalId = await redisClient.get(`email:${email}`);
-    const existingUser = await redisClient.hGetAll(`user:${personalId}`);
-
-    if (!existingUser || Object.keys(existingUser).length === 0) {
-      return res.status(400).json("User not found.");
-    }
-
-    const match = await bcrypt.compare(password, existingUser.hash);
-
-    if (!match) {
-      return res.status(400).json("Incorrect password.");
-    }
-
-    // start a session
-    req.session.session_id = existingUser.sessionId;
-    res.setHeader(
-      "Set-Cookie",
-      serialize("session_id", existingUser.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-      })
-    );
-    res.status(200).json(existingUser);
-  } catch (error) {
-    console.error("Error during sign-in:", error);
-    res.status(500).json("Failed to sign in");
-  }
-});
-
-app.post("/api/google-login", async (req, res) => {
-  const { credential } = req.body;
-
-  if (!credential) {
-    return res.status(400).json("Credential is required.");
-  }
-
-  try {
-    const ticket = await client.verifyIdToken({
-      idToken: credential,
-      audience: CLIENT_ID,
-    });
-
-    const payload = ticket.getPayload();
-    const { sub, email, name } = payload;
-    let user = await redisClient.hGetAll(`user:${sub}`);
-
-    if (Object.keys(user).length === 0) {
-      const defaultUsername = `Drawer#${Math.floor(Math.random() * 10000)}`;
-      const personalId = sub;
-      const sessionId = uuidv4();
-
-      user = {
-        personalId,
-        sessionId: sessionId,
-        email: email,
-        username: defaultUsername,
-        followers: 0,
-        following: 0,
-      };
-
-      await redisClient.hSet(`user:${personalId}`, user);
-      await redisClient.set(`email:${email}`, personalId);
-      await redisClient.set(`sessionId:${sessionId}`, personalId);
-      console.log(
-        `New user created for ${email} with username ${defaultUsername}.`
-      );
-    } else {
-      console.log(`User ${email} exists, signing in.`);
-      user.followers = user.followers || 0;
-      user.following = user.following || 0;
-    }
-
-    // start a session
-    req.session.session_id = user.sessionId;
-    res.setHeader(
-      "Set-Cookie",
-      serialize("session_id", user.sessionId, {
-        maxAge: 60 * 60 * 24 * 7, // 1 week in number of seconds
-        path: "/",
-      })
-    );
-    res.status(200).json(user);
-  } catch (err) {
-    console.error("Error verifying Google ID token:", err);
-    res.status(500).json("Failed to authenticate user.");
-  }
-});
-
-app.post("/api/logout", isAuthenticated, (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json("Failed to log out");
-    }
-    res.clearCookie("session_id");
-    res.status(200).json("Logged out successfully");
-  });
 });
 
 app.get("/api/get-profile/", async (req, res) => {
