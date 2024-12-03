@@ -250,8 +250,11 @@ app.post("/join-game/:hostId", isAuthenticated, async (req, res) => {
   console.log(`Attempting to retrieve Host ID: ${hostId}`);
 
   try {
-    const reply = await redisClient.lRange(`game:${hostId}`, 0, 0);
+    const reply = await redisClient.lRange(`game:${hostId}`, 0, -1);
     if (Object.keys(reply).length > 0) {
+      if (reply.length >= 6)
+        return res.status(500).json("Game is full (max 6 players).");
+
       console.log(`Host ID found: ${hostId}`);
 
       const personalId = await redisClient.get(`sessionId:${sessionId}`);
@@ -451,7 +454,6 @@ app.get("/api/get-profile/", async (req, res) => {
       );
 
       for (const id of personalIds) {
-        console.log("id", id, "vs theirPersonalId", theirPersonalId);
         if (id == theirPersonalId) {
           userProfile.isFollowing = true;
         }
