@@ -232,7 +232,7 @@ app.post("/api/logout", isAuthenticated, (req, res) => {
     if (err) {
       return res.status(500).json("Failed to log out");
     }
-    res.clearCookie("draw_session_id");
+    res.clearCookie("draw_session_id", cookieArgs);
     res.status(200).json("Logged out successfully");
   });
 });
