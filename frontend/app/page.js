@@ -36,9 +36,7 @@ export default function Home() {
   }, []);
 
   const handlePing = () => {
-    console.log("ping...");
-    const res = ping();
-    console.log(res);
+    ping();
   };
 
   const handleFormSubmit = async (e) => {
@@ -123,7 +121,6 @@ export default function Home() {
   const fetchUserProfile = async () => {
     let profile = await accountFetchProfile();
     if (!profile.err) {
-      console.log("got profile", profile);
       setProfile(profile);
       setIsAuthenticated(true);
     } else {
@@ -137,7 +134,6 @@ export default function Home() {
   const fetchOtherUserProfile = async (pid) => {
     let otherProfile = await accountFetchProfile(pid);
     if (!otherProfile.err) {
-      console.log("got OTHER profile", otherProfile);
       setShowFindPanel(false);
       setOtherProfile(otherProfile);
     } else {

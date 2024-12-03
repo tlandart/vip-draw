@@ -76,7 +76,6 @@ export default function VipGame() {
         gameState.playerSave >= 0 &&
         gameState.playerSave === playerNum.current
       ) {
-        console.log("1. calling canvas save func");
         canvasSaveFunc();
       }
 
@@ -90,7 +89,6 @@ export default function VipGame() {
 
     try {
       peerHost(setGameState, restartTimerFunc, addRemoteStream, idLabelRef);
-      console.log("Host setup initiated.");
     } catch (error) {
       console.error("Failed to start host:", error);
     }
@@ -105,13 +103,12 @@ export default function VipGame() {
   function handleJoin(event) {
     event.preventDefault();
     const remoteId = inputIdRef.current.value.trim();
-    console.log("Attempting to join game with ID:", remoteId);
 
     inputIdRef.current.value = "";
     accountJoinGame(remoteId)
       .then((response) => {
         if (response.err) {
-          console.log(response.err);
+          console.error(response.err);
           setErrorMessage(response.err);
           setFadeOut(false);
 
@@ -123,7 +120,6 @@ export default function VipGame() {
           }, 5000);
         } else {
           // Proceed if the game ID is valid
-          console.log("Game is valid:", response);
           peerJoin(
             setGameState,
             restartTimerFunc,
@@ -170,7 +166,6 @@ export default function VipGame() {
   }
 
   function handleBack() {
-    console.log("Going back...");
     if (playerNum.current === 0) {
       const hostId = idLabelRef.current.innerHTML
         .replace("Host ID: ", "")
@@ -190,7 +185,7 @@ export default function VipGame() {
     window.location.reload();
   }
 
-  // TODO for debugging
+  // for debugging
   function gameStateToString() {
     let acc = "";
     for (const s in gameState) {
@@ -219,7 +214,7 @@ export default function VipGame() {
 
   return (
     <>
-      <span>{gameStateToString()}</span>
+      {/* <span>{gameStateToString()}</span> */}
 
       <span
         className="text-3xl flex w-fit ml-auto mr-auto mt-5"

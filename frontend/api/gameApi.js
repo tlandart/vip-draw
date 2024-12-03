@@ -66,8 +66,6 @@ export function peerHost(
   peer = new Peer(pidCustom);
 
   peer.on("open", async function (id) {
-    console.log("starting peer.", id);
-
     if (!id) {
       console.error("Error: Peer ID is empty. Cannot create host.");
       return;
@@ -89,8 +87,6 @@ export function peerHost(
       const response = await accountCreateGame(id);
       if (response.err) {
         console.error("Failed to store Host ID:", response.err);
-      } else {
-        console.log("Host created successfully:", response);
       }
     } catch (error) {
       console.error("Failed to store Host ID:", error);
@@ -128,7 +124,6 @@ export function peerHost(
       c.on("data", function ({ playerNum: playerNum, message: message }) {
         // peerMessageSend()'s request ends up here.
         // now we can process it like how a host's message is processed
-        console.log("received message", message, "from player", playerNum);
 
         if (/^react:.{1}$/u.test(message)) {
           // matches only "react:*" where * is any character including emojis
@@ -140,7 +135,6 @@ export function peerHost(
     });
 
     c.on("close", function () {
-      console.log("conn closed");
       peerDisconnect();
       window.location.reload();
     });
@@ -166,7 +160,6 @@ export function peerJoin(
   peer = new Peer(customPeerIdGen());
 
   peer.on("open", function (id) {
-    console.log("joining peer.", remoteId);
     idLabelRef.current.innerHTML = "Host ID: " + remoteId;
 
     let first = true; // flag for the first time receiving a gameState
@@ -177,7 +170,6 @@ export function peerJoin(
         for (const theirId of gameState.ids.slice(1)) {
           if (theirId !== id) {
             // if it's not OUR id
-            console.log("calling id ", id);
             let call = peer.call(
               theirId,
               canvStream ? canvStream : createEmptyStream()
@@ -187,7 +179,6 @@ export function peerJoin(
               addRemoteStream(remoteStream);
             });
             call.on("close", function () {
-              console.log("call closed");
               peerDisconnect();
               window.location.reload();
             });
@@ -207,7 +198,6 @@ export function peerJoin(
     });
 
     hostConn.on("close", function () {
-      console.log("conn closed");
       peerDisconnect();
       window.location.reload();
     });
@@ -216,7 +206,6 @@ export function peerJoin(
   peer.on("call", function (c) {
     // call with empty media stream initially, will be replaced when canvas is drawn
     c.answer(canvStream ? canvStream : createEmptyStream());
-    console.log("answered call from", c.peer);
     c.on("stream", function (remoteStream) {
       addRemoteStream(remoteStream);
     });
@@ -243,7 +232,6 @@ export function peerHostSend() {
 function peerMessageSend(playerNum, message) {
   if (hostConn && hostConn.open) {
     hostConn.send({ playerNum: playerNum, message: message });
-    console.log("sent message", playerNum, message);
   } else {
     console.error("Connection to host does not exist or is not open.");
   }
@@ -255,7 +243,7 @@ export function peerUpdateStream(stream) {
   canvStream = stream;
   for (const call of calls) {
     if (!call) {
-      console.log(
+      console.error(
         "Attempted to update the stream but could not find current call."
       );
       return;
@@ -269,8 +257,6 @@ export function peerUpdateStream(stream) {
 }
 
 export function peerDisconnect() {
-  console.log("Disconnecting...");
-
   // Reset the game state to initial state
   let sendFlag = false;
   if (gameSt.playerNum === 0) sendFlag = true;
@@ -281,7 +267,6 @@ export function peerDisconnect() {
   // Close all remote connections
   for (const conn of joinConns) {
     if (conn && conn.open) {
-      console.log("Closing connection...");
       conn.close();
     }
   }
@@ -289,7 +274,6 @@ export function peerDisconnect() {
 
   // Close the host connection
   if (hostConn && hostConn.open) {
-    console.log("Closing host connection...");
     hostConn.close();
     hostConn = null;
   }
@@ -297,7 +281,6 @@ export function peerDisconnect() {
   // Close the call connections
   for (const call of calls) {
     if (call) {
-      console.log("Closing call...");
       call.close();
     }
   }
@@ -305,14 +288,12 @@ export function peerDisconnect() {
 
   // Destroy peer instance
   if (peer) {
-    console.log("Destroying peer...");
     peer.destroy();
     peer = null;
   }
 
   // Stop media stream tracks
   if (canvStream && canvStream.getTracks) {
-    console.log("Stopping stream...");
     canvStream.getTracks().forEach((track) => track.stop());
   }
 
@@ -328,7 +309,7 @@ export function peerDisconnect() {
   Logic for the drawing game. These functions take the entire gameState objectively and makes changes. The game component will render the game with the client's associated player number.
 */
 
-export const TIMER_DEFAULT = 15;
+export const TIMER_DEFAULT = 45;
 export const MAX_ROUNDS = 3;
 
 // start the game
@@ -469,7 +450,6 @@ export function gameTimeChange(seconds) {
 
 // time ran out
 function gameTimeout() {
-  console.log("timer ended");
   if (gameSt.start === 2) {
     if (gameSt.round + 1 > MAX_ROUNDS * gameSt.points.length) gameEnd();
     gameSt = {

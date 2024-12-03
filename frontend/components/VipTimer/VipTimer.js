@@ -24,7 +24,6 @@ export default function VipTimer({
       const time = new Date();
       time.setSeconds(time.getSeconds() + secondsInit);
       restart(time, true);
-      console.log("started timer");
     }
 
     setRestartTimerFunc(() => () => {

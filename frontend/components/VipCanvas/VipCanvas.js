@@ -40,17 +40,13 @@ export default function VipCanvas({
         currentDrawing.current.push(currentLine.current);
 
       if (currentDrawing.current.length > 0) {
-        console.log("2. saving drawing.", currentDrawing.current);
         const res = await accountGameSaveDrawing(currentDrawing.current);
         if (!res.err) {
-          console.log("3. saved drawing");
         } else {
-          console.error("3. Failed to save drawing:", res.err);
         }
         resetCanvas(true);
         return;
       } else {
-        console.log("2. not saving empty drawing.");
         resetCanvas(true);
       }
     });
@@ -69,7 +65,6 @@ export default function VipCanvas({
   );
 
   function resetCanvas(deleteStoredDrawing = false) {
-    console.log("resetting canvas");
     if (deleteStoredDrawing) {
       currentLine.current = { colour: colour, points: [] };
       currentDrawing.current = [];
@@ -129,7 +124,6 @@ export default function VipCanvas({
   }
 
   function endCurrentLine() {
-    console.log("end current line:", currentLine.current);
     if (isDrawing) {
       setIsDrawing(false);
       currentDrawing.current.push(currentLine.current);
@@ -138,7 +132,6 @@ export default function VipCanvas({
 
   // draw a full drawing (an array of lines)
   function drawDrawing(lines) {
-    console.log(lines);
     for (const line of lines) {
       if (line.points.length === 1) {
         drawLineSegment(
