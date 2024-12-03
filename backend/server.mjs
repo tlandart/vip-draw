@@ -449,7 +449,9 @@ app.get("/api/get-profile/", async (req, res) => {
         0,
         -1
       );
+
       for (const id of personalIds) {
+        console.log("id", id, "vs theirPersonalId", theirPersonalId);
         if (id == theirPersonalId) {
           userProfile.isFollowing = true;
         }

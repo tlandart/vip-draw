@@ -158,7 +158,7 @@ export default function Home() {
 
   const handleUserClickMine = (user) => {
     if (user.personalId !== profile.personalId) {
-      setOtherProfile(user);
+      fetchOtherUserProfile(user.personalId);
       setShowProfile(false);
     }
   };

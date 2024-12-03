@@ -113,7 +113,7 @@ export default function VipProfile({
     setShowFollowers(!showFollowers);
   };
 
-  const toggleFollowing = () => {
+  const toggleFollowingMenu = () => {
     setShowFollowers(false);
     setShowFollowing(!showFollowing);
   };
@@ -184,7 +184,7 @@ export default function VipProfile({
               <button onClick={toggleFollowers} className="block text-sm">
                 Followers: {theirProfile.followers}
               </button>
-              <button onClick={toggleFollowing} className="block text-sm">
+              <button onClick={toggleFollowingMenu} className="block text-sm">
                 Following: {theirProfile.following}
               </button>
             </div>
@@ -228,14 +228,14 @@ export default function VipProfile({
               <div className="fixed inset-0 flex item-center justify-center z-50">
                 <div
                   className="absolute inset-0 bg-black opacity-50"
-                  onClick={toggleFollowing}
+                  onClick={toggleFollowingMenu}
                 ></div>
                 <div className="relative z-10 w-1/3 max-h-[50%] overflow-y-auto bg-gray-100 p-6 rounded-lg shadow-lg mt-auto mb-auto">
                   <div className="flex item-center justify-center">
                     <h2 className="text-lg font-bold">Following</h2>
                     <button
                       className="w-7 h-7 absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full"
-                      onClick={toggleFollowing}
+                      onClick={toggleFollowingMenu}
                     >
                       X
                     </button>
@@ -248,7 +248,7 @@ export default function VipProfile({
                           key={index}
                           onClick={() => {
                             onUserClick(user);
-                            toggleFollowing();
+                            toggleFollowingMenu();
                           }}
                         >
                           {user.username}

@@ -16,7 +16,8 @@ async function handleResponse(res) {
   if (res.status != 200) {
     const err = await res.json();
     // delete draw_session_id
-    deleteCookie("draw_session_id");
+    if (res.status === 403 || res.status === 401)
+      deleteCookie("draw_session_id");
     return { err: err };
   }
   const s = await res.json();
