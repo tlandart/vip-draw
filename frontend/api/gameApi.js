@@ -63,7 +63,6 @@ export function peerHost(
   restartTime = restartTimerFunc;
 
   const pidCustom = customPeerIdGen();
-  console.log(pidCustom);
   peer = new Peer(pidCustom);
 
   peer.on("open", async function (id) {
@@ -386,8 +385,8 @@ function gameGuess(playerNum, guess) {
     !(playerNum in gameSt.correctPlayers)
   ) {
     let points = gameSt.points;
-    points[playerNum] += gameSt.timeLeft;
-    points[gameSt.currentPlayer] += gameSt.timeLeft / 6;
+    points[playerNum] += Math.round(gameSt.timeLeft);
+    points[gameSt.currentPlayer] += Math.round(gameSt.timeLeft / 6);
     addMessage(`[${gameSt.usernames[playerNum]} correctly guessed!]`);
 
     if (gameSt.correctPlayers.length + 1 >= gameSt.playerCount - 1) {

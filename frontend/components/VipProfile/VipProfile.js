@@ -119,7 +119,7 @@ export default function VipProfile({
   };
 
   return (
-    <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
+    <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center z-10">
       {theirProfile && (
         <div className="relative w-3/4 h-5/6 bg-gray-100 p-6 rounded-lg shadow-lg">
           <button

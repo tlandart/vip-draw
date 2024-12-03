@@ -251,7 +251,7 @@ export default function Home() {
             onUserClick={handleUserClickOther}
           />
         )}
-        <div className="absolute bottom-2 right-2">
+        <div className="absolute bottom-2 right-2 z-10">
           {isAuthenticated && (
             <button
               onClick={() => setShowFindPanel(true)}
@@ -262,7 +262,7 @@ export default function Home() {
           )}
         </div>
         {showFindPanel && (
-          <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center">
+          <div className="absolute top-0 left-0 w-full h-full bg-white bg-opacity-80 flex flex-col items-center justify-center z-10">
             <div className="relative w-3/4 sm:w-1/2 md:w-1/3 bg-gray-100 p-6 rounded-lg shadow-lg">
               <button
                 onClick={handleFindPanelClose}
